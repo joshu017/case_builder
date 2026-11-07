@@ -40,4 +40,4 @@ pnpm security:all
 
 `src/model.ts`: versioned project data and validation. `src/geometry.ts`: shared Manifold solids. `src/cam.ts`: isolated Masuter postprocessor. `src/export.ts`: STL/SVG/DXF/JSON/ZIP. `src/main.ts`: editor. `src/preview.ts`: Three.js assembly.
 
-Cloudflare Workers assets deployment is configured in `wrangler.jsonc`. No database, accounts or backend API is required for this local-first MVP. Account selection and outward-facing deployment/push approval remain pending under the user's Workers conventions. Authenticated Snyk SCA/SAST are release gates; CI does not hold credentials or deploy automatically.
+Cloudflare Workers assets deployment is configured in `wrangler.jsonc`. No database, accounts or backend API is required for this local-first MVP. The production route is https://joshjacobson.net/casebuilder/ . A minimal Worker maps this path to the static asset binding. The domain belongs to the Josh account; supply its account ID through the deployment environment. Authenticated Snyk SCA/SAST are release gates; CI does not hold credentials or deploy automatically.
