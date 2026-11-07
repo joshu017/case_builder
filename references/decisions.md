@@ -55,3 +55,10 @@ User selected always including printable end caps alongside the existing CNC pro
 - User requested a thinner banner, removing unnecessary padding and second-line subtitle. Desktop header is 54 px with ~32 px controls; save status is a compact accessible indicator.
 - Latest correction supersedes keeping the old green default: NEW projects use blue-gray #71808A. Walnut stays the default cap material. Existing project colors remain unchanged.
 - Controls, coordinates, geometry, project format and manufacturing workflow remain unchanged. Responsive stacked header on narrow screens is retained to keep actions usable.
+
+## Compact interface revision
+
+- User requested shorter navigation, smaller inputs, reduced spacing, permanently expanded settings, and side-by-side Plastic color / Wood.
+- Replaced all disclosure controls with permanent sections, including Repeat selection. Navigation is 38 px and inputs 28 px. Profile style and radius also share a row.
+- Shortened redundant helper prose while retaining hardware sizes, symmetric slopes and thicker-plate warnings. Canvas height adapts to browser height.
+- User reviewed the local preview and explicitly approved deployment. Normal enclosure controls fit the 1366×768 viewport; selected-cutout tools can still require sidebar scrolling.

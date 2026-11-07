@@ -42,3 +42,4 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - Compact single-row desktop header: 54 px, buttons ~32 px, no subtitle or visible second-line save text. Preserve accessible save status and hover tooltip.
 - New-project case material defaults to a lighter blue-tinged gray #71808A; wood remains walnut. Preserve all saved project colors. UI restyling must not override project material settings.
 - Appearance section is expanded by default, exposing plastic color and wood controls.
+- Compact layout: navigation 38 px, fields 28 px, tight spacing. All former disclosure sections (including Repeat selection) are permanent sections with headings. Appearance and profile controls use two-column rows. Target the normal editor's full settings at 1366×768; retain scrolling for long selection tools and smaller screens.
