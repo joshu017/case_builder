@@ -1,0 +1,139 @@
+import Module from 'manifold-3d';
+import wasmUrl from 'manifold-3d/manifold.wasm?url';
+import { newProject, parseProject, dimensions, faceSize, layoutMargin, clone, uid, issues, type Project, type Shape, type Face } from './model';
+import { buildAssembly, type Assembly } from './geometry';
+import { Preview } from './preview';
+import { download, exportPackage, layoutDXF, layoutSVG, escape as esc } from './export';
+import { makeToolpath } from './cam';
+import './style.css';
+const $=<T extends Element=HTMLElement>(s:string)=>document.querySelector<T>(s)!;
+let project=newProject(),face:Face='control',tab='control',selected=new Set<string>(),clipboard:Shape[]=[],undo:Project[]=[],redo:Project[]=[],assembly:Assembly|null=null,exploded=false,preview:Preview|null=null;
+let startup='';try{const saved=localStorage.getItem('case-builder-v1');if(saved)project=parseProject(saved);}catch{startup='Saved project could not be loaded. Import a project JSON or start a new design.';}
+const app=$('#app');
+app.innerHTML=`<header><div class="brand"><span class="brand-icon">▱</span><span>CASE BUILDER<small>Electronics enclosure designer</small></span></div><div class="project-title"><input id="project-name" aria-label="Project name" maxlength="100"><span id="save-state">Saved on this device</span></div><div class="header-actions"><button data-action="new">New</button><button data-action="open">Open project</button><button data-action="save">Save project</button><button class="primary" data-action="package">Export package <span>↗</span></button></div><input type="file" id="import-file" accept=".json,application/json" hidden></header>
+<nav aria-label="Design views"><div class="nav-title">DESIGN STUDIO</div><button data-tab="control" class="active">01 <span>Control surface</span></button><button data-tab="back">02 <span>Back</span></button><button data-tab="assembly">03 <span>Assembly</span></button><button data-tab="manufacturing">04 <span>Manufacturing</span></button><div class="units">All dimensions in mm</div></nav>
+<main><aside id="left-panel"></aside><section class="workspace"><div class="workspace-heading"><div><span class="eyebrow" id="scope"></span><h1 id="view-title"></h1></div><div id="view-actions"></div></div><div id="notice" role="status"></div><div id="editor-wrap"><div class="editor-toolbar"><div><button data-action="add-rect">▭ Rectangle</button><button data-action="add-circle">○ Circle</button></div><div><button data-action="undo" title="Undo (⌘Z)">↶ Undo</button><button data-action="redo" title="Redo (⌘⇧Z)">↷</button><button data-action="fit">Fit view</button></div></div><div class="drawing"><svg id="canvas" role="img" aria-label="Cutout layout editor"></svg></div><div class="canvas-footer"><span id="canvas-size"></span><span>Drag to move · Shift-click to select multiple · 1 mm snap</span></div></div><div id="assembly-wrap"><div id="preview"></div><div class="preview-controls"><span>Drag to rotate · Scroll to zoom</span><button data-action="explode">Exploded view</button><button data-action="fit3d">Reset view</button></div></div><div id="manufacturing-wrap"></div><div id="bottom-info"></div></section><aside id="right-panel"></aside></main><div id="toast" role="status"></div>`;
+$('#project-name').setAttribute('value',project.name);
+try{preview=new Preview($('#preview'));}catch{ $('#preview').textContent='3D preview is unavailable: WebGL could not start. Geometry and file exports remain available.'; }
+const wasmPromise=Module({locateFile:()=>wasmUrl}).then(w=>{w.setup();return w;});
+let geometryTimer:ReturnType<typeof setTimeout>,revision=0;
+function persist(){try{localStorage.setItem('case-builder-v1',JSON.stringify(project));$('#save-state').textContent='Saved on this device';}catch{$('#save-state').textContent='Local save unavailable — download project';}}
+function checkpoint(){undo.push(clone(project));if(undo.length>50)undo.shift();redo=[];}
+function change(fn:()=>void){checkpoint();fn();persist();render();queueGeometry();}
+function toast(text:string){$('#toast').textContent=text;$('#toast').classList.add('show');setTimeout(()=>$('#toast').classList.remove('show'),4500);}
+function shapes(){return project.layouts[face];}
+function picked(){return shapes().filter(q=>selected.has(q.id));}
+function queueGeometry(){const rev=++revision;assembly=null;clearTimeout(geometryTimer);geometryTimer=setTimeout(async()=>{try{const errors=issues(project);if(errors.length){renderStatus();return;}const w=await wasmPromise;if(rev!==revision)return;const result=buildAssembly(w,project);if(rev!==revision)return;assembly=result;preview?.set(result,project,exploded);renderStatus();if(tab==='manufacturing')renderManufacturing();}catch(err){$('#notice').textContent=String(err instanceof Error?err.message:err);$('#notice').className='error';}},180);renderStatus();}
+const field=(label:string,key:string,value:number,min:number,max:number,step=1)=>`<label class="field"><span>${label}</span><div><input type="number" data-e="${key}" value="${Number(value.toFixed(4))}" min="${min}" max="${max}" step="${step}" aria-label="${label}"><span>mm</span></div></label>`;
+const mfield=(label:string,key:string,value:number,min:number,max:number,step=1,unit='mm')=>`<label class="field"><span>${label}</span><div><input type="number" data-m="${key}" value="${value}" min="${min}" max="${max}" step="${step}" aria-label="${label}"><span>${unit}</span></div></label>`;
+function render(){
+ document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',(b as HTMLElement).dataset.tab===tab));
+ const editing=tab==='control'||tab==='back';
+ $('#editor-wrap').hidden=!editing;$('#assembly-wrap').hidden=tab!=='assembly';$('#manufacturing-wrap').hidden=tab!=='manufacturing';
+ $('#scope').textContent=editing?'LAYOUT · '+(face==='control'?'UPPER SLOPED FACE':'WIDE REAR FACE'):tab==='assembly'?'ASSEMBLED ENCLOSURE':'FABRICATION SETUP';
+ $('#view-title').textContent=tab==='control'?'Control surface':tab==='back'?'Back':tab==='assembly'?'Assembly':'Manufacturing';
+ $('#view-actions').innerHTML=editing?'<button data-action="svg">Export SVG</button><button data-action="dxf">Export DXF</button>':'<span class="badge">SYMMETRIC PROFILE</span>';
+ const d=dimensions(project),e=project.enclosure;
+ $('#left-panel').innerHTML=`<div class="panel-label">PROJECT CONTENTS</div><button class="face-item ${face==='control'&&editing?'chosen':''}" data-tab="control"><span>▱</span><div>Control surface<small>${project.layouts.control.length} cutouts</small></div></button><button class="face-item ${face==='back'&&editing?'chosen':''}" data-tab="back"><span>▭</span><div>Back<small>${project.layouts.back.length} cutouts</small></div></button><div class="section-title"><h2>${editing?'Cutouts':'Parts'}</h2><span>${editing?shapes().length:4}</span></div>${editing?(shapes().length?`<div class="object-list">${shapes().map(q=>`<button data-select="${esc(q.id)}" class="object ${selected.has(q.id)?'chosen':''}"><span>${q.kind==='circle'?'○':'▭'}</span><span>${esc(q.name)}${q.group?'<small>Grouped</small>':''}</span></button>`).join('')}</div>`:'<p class="muted empty-copy">No cutouts yet. Add a rectangle or circle to this face.</p>'):'<ul class="parts-list"><li>Plastic extrusion</li><li>Bottom plate</li><li>Left wood cap</li><li>Right wood cap</li></ul>'}<div class="section-title"><h2>Component library</h2><span>${project.components.length}</span></div><p class="muted">Custom components travel with this project and work on either face.</p>${project.components.map(c=>`<button class="library-item" data-component="${esc(c.id)}"><span>⊞</span><div>${esc(c.name)}<small>${c.shapes.length} cutouts</small></div><span>+</span></button>`).join('')}${project.components.length?'':'<div class="empty-library">Select cutouts, then save them as a component.</div>'}<div class="left-foot"><span class="status-dot"></span> Local-first project<small>Saved in this browser. Download a project file to keep a portable copy.</small></div>`;
+ renderInspector();renderCanvas();renderStatus();if(tab==='manufacturing')renderManufacturing();
+ $('#bottom-info').innerHTML=`<div><span>PLASTIC FOOTPRINT</span><strong>${d.width.toFixed(1)} × ${d.depth.toFixed(1)} mm</strong></div><div><span>REAR / FRONT HEIGHT</span><strong>${e.height.toFixed(1)} / ${d.frontHeight.toFixed(1)} mm</strong></div><div><span>TOTAL INCLUDED ANGLE</span><strong>${e.angle}° <small>(±${e.angle/2}°)</small></strong></div><div><span>END CAPS</span><strong>${e.woodThickness} mm ${e.wood}</strong></div>`;
+}
+function renderInspector(){
+ const e=project.enclosure,ps=picked(),editing=tab==='control'||tab==='back';
+ const selection=editing?`<div class="section-title"><h2>Selection</h2><span>${ps.length}</span></div>${ps.length?`${ps.length===1?`<label class="wide-field">Name<input id="shape-name" value="${esc(ps[0].name)}" maxlength="100"></label><div class="field-grid">${[['X','x'],['Y','y'],[ps[0].kind==='circle'?'Diameter':'Width','w'],...(ps[0].kind==='rect'?[['Height','h']]:[])].map(([label,k])=>`<label class="field"><span>${label}</span><input type="number" data-shape="${k}" value="${ps[0][k as 'x'|'y'|'w'|'h']}" min="${k==='x'||k==='y'?0:0.5}" max="1000" step="0.5"></label>`).join('')}</div>`:`<p class="muted">${ps.length} cutouts selected. Drag any selected cutout to move them together.</p>`}<div class="button-row"><button data-action="copy">Copy</button><button data-action="paste">Paste</button><button data-action="delete" class="danger">Delete</button></div><div class="button-row"><button data-action="group">Group</button><button data-action="ungroup">Ungroup</button></div><details><summary>Repeat selection</summary><div class="field-grid"><label class="field">Columns<input id="columns" type="number" value="4" min="1" max="20"></label><label class="field">Rows<input id="rows" type="number" value="1" min="1" max="20"></label><label class="field">Column pitch (mm)<input id="pitch-x" type="number" value="25" min="1" max="500"></label><label class="field">Row pitch (mm)<input id="pitch-y" type="number" value="25" min="1" max="500"></label></div><button data-action="repeat" class="full">Create pattern</button></details><label class="wide-field">Component name<input id="component-name" placeholder="e.g. Slider with mounting holes" maxlength="100"></label><button data-action="save-component" class="full">Save selection to library</button>`:'<p class="muted">Click a cutout to edit its dimensions. Shift-click selects more than one.</p>'}<hr>`:'';
+ $('#right-panel').innerHTML=selection+`<div class="section-title"><h2>Enclosure</h2><span>mm</span></div><label class="check"><input id="auto-size" type="checkbox" ${e.autoSize?'checked':''}> Size from control layout</label><p class="hint">${e.autoSize?'Cutout extents + padding determine width and depth.':'Set dimensions directly, or size them from your layout.'}</p><div class="field-grid">${e.autoSize?field('Padding','padding',e.padding,12,100):field('Width','width',e.width,40,1000)+field('Depth','depth',e.depth,35,1000)}${field('Rear height','height',e.height,22,300)}<label class="field"><span>Total angle</span><div><input type="number" data-e="angle" aria-label="Total angle" value="${e.angle}" min="0" max="30" step="1"><span>°</span></div></label></div><p class="hint">Symmetric: ${e.angle/2}° on the control surface and ${e.angle/2}° on the bottom.</p><details open><summary>Walls & bottom plate</summary><div class="field-grid">${field('Wall','wall',e.wall,2,6,0.5)}${field('Plate','plate',e.plate,2,5,0.5)}</div><label class="wide-field">Bottom screws<select data-e="screws"><option value="4" ${e.screws===4?'selected':''}>4 × countersunk M3</option><option value="6" ${e.screws===6?'selected':''}>6 × countersunk M3</option></select></label><p class="hint">Flush recessed plate. Plastic tap holes: 2.5 mm.</p></details><details open><summary>Wood end caps & profile</summary><div class="field-grid">${field('Wood thickness','woodThickness',e.woodThickness,4,25,0.5)}${field('Overhang','overhang',e.overhang,0,10,0.5)}</div><label class="wide-field">Profile corners<select data-e="edge">${['sharp','chamfer','fillet'].map(v=>`<option ${e.edge===v?'selected':''}>${v}</option>`).join('')}</select></label>${e.edge!=='sharp'?field(e.edge==='fillet'?'Radius':'Corner size','radius',e.radius,0,5,0.5):''}<p class="hint">Four M3 socket-head screws per cap.</p></details><details><summary>Appearance</summary><label class="wide-field">Plastic color<input type="color" data-e="color" value="${e.color}"></label><label class="wide-field">Wood<select data-e="wood">${['walnut','maple','cherry','oak'].map(v=>`<option ${e.wood===v?'selected':''}>${v}</option>`).join('')}</select></label></details>`;
+}
+function renderStatus(){
+ const errs=issues(project),notice=$('#notice');notice.className=errs.length?'error':assembly?'':'loading';
+ notice.textContent=errs.length?errs.join(' '):assembly?(startup||''):'Updating solid geometry…';
+ document.querySelectorAll<HTMLButtonElement>('[data-action="package"]').forEach(b=>{b.disabled=!assembly||errs.length>0;});
+}
+function renderCanvas(){
+ const svg=$<SVGSVGElement>('#canvas'),size=faceSize(project,face),m=16,margin=layoutMargin(project);
+ svg.setAttribute('viewBox',`${-m} ${-m} ${size.w+2*m} ${size.h+2*m}`);
+ svg.innerHTML=`<defs><pattern id="grid" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M 5 0 L 0 0 0 5" fill="none" stroke="#dbe0d7" stroke-width="0.15"/></pattern></defs><rect x="0" y="0" width="${size.w}" height="${size.h}" rx="1.5" fill="#fafbf6" stroke="#62776a" stroke-width="0.35"/><rect width="${size.w}" height="${size.h}" fill="url(#grid)"/><rect x="${margin}" y="${margin}" width="${Math.max(0,size.w-2*margin)}" height="${Math.max(0,size.h-2*margin)}" fill="none" stroke="#9eae9a" stroke-dasharray="1.2 1.5" stroke-width="0.3"/><text class="dimension" x="${size.w/2}" y="-7" text-anchor="middle">${size.w.toFixed(1)} mm</text><text class="face-label" x="0" y="-3">${face==='control'?'FRONT EDGE':'BOTTOM EDGE'}</text><text class="face-label" x="${size.w}" y="${size.h+6}" text-anchor="end">${face==='control'?'BACK EDGE':'TOP EDGE'}</text>${shapes().map(q=>{const attrs=`data-id="${esc(q.id)}" class="cutout ${selected.has(q.id)?'selected':''}" fill="${selected.has(q.id)?'#c8d6a4':'#d7dfd3'}" stroke="${selected.has(q.id)?'#567139':'#526553'}" stroke-width="${selected.has(q.id)?0.8:0.4}"`;return q.kind==='circle'?`<circle ${attrs} cx="${q.x+q.w/2}" cy="${q.y+q.w/2}" r="${q.w/2}"><title>${esc(q.name)} · Ø${q.w} mm</title></circle>`:`<rect ${attrs} x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}"><title>${esc(q.name)} · ${q.w} × ${q.h} mm</title></rect>`;}).join('')}${!shapes().length?`<text class="empty-title" x="${size.w/2}" y="${size.h/2-3}" text-anchor="middle">Start with a cutout</text><text class="empty-subtitle" x="${size.w/2}" y="${size.h/2+5}" text-anchor="middle">Add a rectangle or circle above</text>`:''}`;
+ $('#canvas-size').textContent=`${size.w.toFixed(1)} × ${size.h.toFixed(1)} mm · ${shapes().length} cutouts`;
+}
+function renderManufacturing(){
+ const m=project.machining;let cam;try{if(assembly)cam=makeToolpath(project,assembly.capOutline,assembly.screwCenters);}catch{}
+ $('#manufacturing-wrap').innerHTML=`<div class="manufacturing-grid"><div class="setup-card"><div class="eyebrow">3-AXIS MILL</div><h2>FoxAlien Masuter</h2><p>Stock 60 W spindle · GRBL 1.1h</p><label class="wide-field">Flat end mill<select data-m="tool"><option value="1.5875" ${m.tool===1.5875?'selected':''}>1/16 inch · 1.5875 mm</option><option value="3.175" ${m.tool===3.175?'selected':''}>1/8 inch · 3.175 mm</option></select></label><div class="field-grid">${mfield('Feed','feed',m.feed,10,1000,10,'mm/min')}${mfield('Plunge','plunge',m.plunge,10,300,10,'mm/min')}${mfield('Stepdown','stepDown',m.stepDown,0.1,1,0.1)}${mfield('Safe Z','safeZ',m.safeZ,2,20,1)}${mfield('Spindle','rpm',m.rpm,1000,10000,100,'S')}${mfield('Through cut','through',m.through,0,0.5,0.1)}${mfield('Stock margin','stockMargin',m.stockMargin,5,30,1)}</div><div class="setup-note"><strong>Double-sided tape setup</strong><p>One cap per setup, outside face up. G54 XY zero: lower-left stock corner. Z zero: top of wood. Repeat for the second cap.</p><p>Feeds are provisional. Verify spindle scaling, work offset and tool clearance; simulate and air-cut before machining. Clamp fixtures are not supported yet.</p></div></div><div><div class="toolpath-card"><div class="eyebrow">END-CAP TOOLPATH · TOP VIEW</div>${cam?`<svg viewBox="-3 -3 ${cam.width+6} ${cam.height+6}" role="img" aria-label="End cap milling toolpath"><g transform="translate(0 ${cam.height}) scale(1 -1)"><rect width="${cam.width}" height="${cam.height}" fill="#e8ddc4" stroke="#ad9b7b" stroke-width="0.3"/>${cam.paths.map(path=>`<polyline points="${path.map(q=>q.join(',')).join(' ')}" fill="none" stroke="#526d55" stroke-width="0.18"/>`).join('')}<circle r="1.2" fill="#bd6644"/></g></svg><p>Minimum stock: ${cam.width.toFixed(1)} × ${cam.height.toFixed(1)} × ${project.enclosure.woodThickness} mm</p><p class="hint">Lines show cutter-center paths. Head recesses → clearance holes → outside contour.</p>`:'<p>Resolve geometry errors to preview the toolpath.</p>'}</div><div class="setup-card"><div class="eyebrow">FDM PRINTING</div><h2>Bambu P1S</h2><p>Configured usable volume: 250 × 250 × 250 mm.</p><p>${assembly?'Control-surface-down shell: '+assembly.printBounds.map(n=>n.toFixed(1)).join(' × ')+' mm':'Calculating print envelope…'}</p>${assembly?.printBounds.some(n=>n>250)?'<p class="error">Shell exceeds the printer envelope. Reduce case size before exporting.</p>':''}<p class="hint">The exported extrusion is oriented control surface down. Enable supports for rear cutouts. Bottom plate exports flat.</p></div></div></div>`;
+}
+function addShape(kind:'rect'|'circle'){
+ const q:Shape={id:uid(),kind,x:20,y:20,w:kind==='circle'?7:20,h:kind==='circle'?7:8,name:kind==='circle'?'Circle cutout':'Rectangle cutout'};
+ if(shapes().length>=400)return toast('Maximum 400 cutouts per face.');
+ change(()=>{shapes().push(q);selected=new Set([q.id]);});
+}
+function select(id:string,extend=false){const q=shapes().find(x=>x.id===id);if(!q)return;const ids=q.group?shapes().filter(x=>x.group===q.group).map(x=>x.id):[id];if(!extend)selected.clear();const remove=extend&&selected.has(id);ids.forEach(x=>remove?selected.delete(x):selected.add(x));}
+function duplicate(source:Shape[],dx=5,dy=5){const groups=new Map<string,string>();return source.map(q=>({...q,id:uid(),x:q.x+dx,y:q.y+dy,...(q.group?{group:groups.get(q.group)??(groups.set(q.group,uid()),groups.get(q.group))}:{})}));}
+function insertCopies(copy:Shape[]){if(shapes().length+copy.length>400)return toast('Maximum 400 cutouts per face.');change(()=>{shapes().push(...copy);selected=new Set(copy.map(q=>q.id));});}
+async function action(name:string){
+ try{
+ if(name==='add-rect')addShape('rect');
+ if(name==='add-circle')addShape('circle');
+ if(name==='save')download(JSON.stringify(project,null,2),'project.json','application/json');
+ if(name==='open')$<HTMLInputElement>('#import-file').click();
+ if(name==='new'&&confirm('Start a new project? Download the current project first if you want to keep it.')){change(()=>{project=newProject();selected.clear();});$<HTMLInputElement>('#project-name').value=project.name;}
+ if(name==='package'){if(!assembly)throw Error('Wait for valid geometry before exporting.');download(exportPackage(project,assembly),'case-builder-package.zip','application/zip');toast('Package exported with project JSON, STL, layouts and end-cap G-code.');}
+ if(name==='svg')download(layoutSVG(project,face),`${face}.svg`,'image/svg+xml');
+ if(name==='dxf')download(layoutDXF(project,face),`${face}.dxf`,'application/dxf');
+ if(name==='copy'){clipboard=clone(picked());toast(`${clipboard.length} cutouts copied.`);}
+ if(name==='paste'){if(!clipboard.length)return toast('Copy a selection first.');insertCopies(duplicate(clipboard));}
+ if(name==='delete'&&selected.size)change(()=>{project.layouts[face]=shapes().filter(q=>!selected.has(q.id));selected.clear();});
+ if(name==='group'&&selected.size>1)change(()=>{const group=uid();picked().forEach(q=>q.group=group);});
+ if(name==='ungroup'&&selected.size)change(()=>{picked().forEach(q=>delete q.group);});
+ if(name==='save-component'){const name=$<HTMLInputElement>('#component-name').value.trim();if(!name)return toast('Enter a name for the component.');if(project.components.length>=100)return toast('Maximum 100 components per project.');const ps=picked(),x=Math.min(...ps.map(q=>q.x)),y=Math.min(...ps.map(q=>q.y));change(()=>project.components.push({id:uid(),name,shapes:ps.map(q=>({...q,x:q.x-x,y:q.y-y}))}));toast('Component saved with this project.');}
+ if(name==='repeat'){
+ const cols=Number($<HTMLInputElement>('#columns').value),rows=Number($<HTMLInputElement>('#rows').value),dx=Number($<HTMLInputElement>('#pitch-x').value),dy=Number($<HTMLInputElement>('#pitch-y').value);
+ if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<1||rows<1||cols>20||rows>20||dx<1||dy<1||!Number.isFinite(dx+dy))throw Error('Use 1–20 rows and columns with positive pitch.');
+ const ps=clone(picked()),copies:Shape[]=[];for(let y=0;y<rows;y++)for(let x=0;x<cols;x++)if(x||y)copies.push(...duplicate(ps,x*dx,y*dy));insertCopies(copies);
+ }
+ if(name==='undo'&&undo.length){redo.push(clone(project));project=undo.pop()!;selected.clear();persist();render();queueGeometry();$<HTMLInputElement>('#project-name').value=project.name;}
+ if(name==='redo'&&redo.length){undo.push(clone(project));project=redo.pop()!;selected.clear();persist();render();queueGeometry();$<HTMLInputElement>('#project-name').value=project.name;}
+ if(name==='explode'){exploded=!exploded;if(assembly)preview?.set(assembly,project,exploded);$('[data-action="explode"]').textContent=exploded?'Assembled view':'Exploded view';}
+ if(name==='fit3d')preview?.fit(project);
+ if(name==='fit')renderCanvas();
+ }catch(err){toast(err instanceof Error?err.message:String(err));}
+}
+app.addEventListener('click',event=>{
+ const t=(event.target as HTMLElement).closest<HTMLElement>('button');if(!t)return;
+ if(t.dataset.action)void action(t.dataset.action);
+ if(t.dataset.tab){tab=t.dataset.tab;if(tab==='control'||tab==='back'){face=tab;selected.clear();}render();}
+ if(t.dataset.select){select(t.dataset.select,(event as MouseEvent).shiftKey);render();}
+ if(t.dataset.component){const c=project.components.find(c=>c.id===t.dataset.component);if(c){if(tab!=='control'&&tab!=='back'){tab=face;render();}const copies=duplicate(c.shapes,20,20),group=uid();copies.forEach(q=>q.group=group);insertCopies(copies);}}
+});
+app.addEventListener('change',event=>{
+ const t=event.target as HTMLInputElement|HTMLSelectElement;
+ try{
+ if(t.id==='project-name'){const v=t.value.trim()||'Untitled enclosure';change(()=>project.name=v);t.value=v;}
+ if(t.id==='shape-name')change(()=>picked()[0].name=t.value.slice(0,100));
+ if(t.id==='auto-size')change(()=>project.enclosure.autoSize=(t as HTMLInputElement).checked);
+ if(t.dataset.shape){if(!t.value.trim()||!(t as HTMLInputElement).checkValidity())throw Error('Enter a valid cutout dimension.');change(()=>{const q=picked()[0];(q as unknown as Record<string,unknown>)[t.dataset.shape!]=Number(t.value);if(q.kind==='circle')q.h=q.w;});}
+ if(t.dataset.e||t.dataset.m){if(!t.value.trim()||!t.checkValidity())throw Error('Enter a value within the displayed limits.');const key=t.dataset.e??t.dataset.m!,v=['edge','color','wood'].includes(key)?t.value:Number(t.value);change(()=>{const obj=t.dataset.e?project.enclosure:project.machining;(obj as unknown as Record<string,unknown>)[key]=v;});}
+ }catch(err){toast(err instanceof Error?err.message:String(err));render();}
+});
+$<HTMLInputElement>('#import-file').addEventListener('change',async event=>{const input=event.target as HTMLInputElement,f=input.files?.[0];if(!f)return;try{if(f.size>2_000_000)throw Error('Project file exceeds 2 MB.');const p=parseProject(await f.text());if(confirm('Replace the current design with this project?')){change(()=>{project=p;selected.clear();startup='';});$<HTMLInputElement>('#project-name').value=project.name;toast('Project loaded, including custom components.');}}catch(err){toast(err instanceof Error?err.message:String(err));}input.value='';});
+function svgPoint(event:PointerEvent){const svg=$<SVGSVGElement>('#canvas'),p=svg.createSVGPoint();p.x=event.clientX;p.y=event.clientY;return p.matrixTransform(svg.getScreenCTM()!.inverse());}
+let drag:null|{x:number;y:number;items:Shape[];moved:boolean}=null;
+$('#canvas').addEventListener('pointerdown',event=>{
+ const ev=event as PointerEvent,t=(ev.target as Element).closest<SVGElement>('[data-id]');
+ if(!t){selected.clear();render();return;}const id=t.dataset.id!;
+ if(!selected.has(id)||ev.shiftKey)select(id,ev.shiftKey);
+ const p=svgPoint(ev);drag={x:p.x,y:p.y,items:clone(picked()),moved:false};renderInspector();renderCanvas();ev.preventDefault();
+});
+window.addEventListener('pointermove',ev=>{
+ if(!drag)return;const p=svgPoint(ev);let dx=Math.round(p.x-drag.x),dy=Math.round(p.y-drag.y);if(!dx&&!dy&&!drag.moved)return;
+ dx=Math.max(dx,-Math.min(...drag.items.map(q=>q.x)));dy=Math.max(dy,-Math.min(...drag.items.map(q=>q.y)));
+ if(!drag.moved){checkpoint();drag.moved=true;}
+ for(const src of drag.items){const q=shapes().find(q=>q.id===src.id);if(q){q.x=src.x+dx;q.y=src.y+dy;}}
+ renderCanvas();
+});
+window.addEventListener('pointerup',()=>{if(drag?.moved){persist();render();queueGeometry();}drag=null;});
+window.addEventListener('keydown',ev=>{
+ if((ev.target as Element).closest('input,textarea,select'))return;
+ const mod=ev.metaKey||ev.ctrlKey;
+ if(mod&&['c','v','z','g','a'].includes(ev.key.toLowerCase())){ev.preventDefault();const key=ev.key.toLowerCase();if(key==='a'){selected=new Set(shapes().map(q=>q.id));render();}else void action(key==='c'?'copy':key==='v'?'paste':key==='g'?(ev.shiftKey?'ungroup':'group'):ev.shiftKey?'redo':'undo');}
+ if((ev.key==='Delete'||ev.key==='Backspace')&&selected.size){ev.preventDefault();void action('delete');}
+ if(ev.key==='Escape'){selected.clear();render();}
+ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(ev.key)&&selected.size){ev.preventDefault();const step=ev.shiftKey?10:1;change(()=>picked().forEach(q=>{q.x=Math.max(0,q.x+(ev.key==='ArrowRight'?step:ev.key==='ArrowLeft'?-step:0));q.y=Math.max(0,q.y+(ev.key==='ArrowDown'?step:ev.key==='ArrowUp'?-step:0));}));}
+});
+render();queueGeometry();

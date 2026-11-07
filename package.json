@@ -1,0 +1,30 @@
+{
+  "name": "case-builder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "preview": "vite preview --host 127.0.0.1",
+    "deploy": "pnpm build && wrangler deploy",
+    "security": "snyk test --dev --severity-threshold=high",
+    "security:code": "snyk code test --severity-threshold=high",
+    "security:all": "pnpm security && pnpm security:code"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "manifold-3d": "^3.5.4",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6",
+    "wrangler": "^4.158.0"
+  }
+}
