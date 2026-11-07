@@ -36,3 +36,9 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - Return dimensioned 2D SVG previews honestly labelled as such, not 3D or electronics-clearance checks. Overlapping cutouts are warnings because compound openings may be intentional.
 - MCP request limit 256 KiB; 64 shapes per face/component. Rate limit 60 requests per IP per minute per Cloudflare location. No supplied code execution, arbitrary URL fetch, machine control, accounts or persistent artifacts.
 - Validate real MCP client initialize/list/call flows and export in workerd before release. scripts/check-mcp.ts accepts a local or production endpoint.
+
+## Interface design system
+- Reference: https://wrong.rodeo. Use its metal palette (#D8E1E7 / #EEF3F6 / #C4CFD7), ink #101418, vermilion #F04424, Bricolage Grotesque display and Instrument Sans body typography. Keep technical numeric fields in monospace.
+- Compact single-row desktop header: 54 px, buttons ~32 px, no subtitle or visible second-line save text. Preserve accessible save status and hover tooltip.
+- New-project case material defaults to a lighter blue-tinged gray #71808A; wood remains walnut. Preserve all saved project colors. UI restyling must not override project material settings.
+- Appearance section is expanded by default, exposing plastic color and wood controls.

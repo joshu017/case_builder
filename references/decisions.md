@@ -48,3 +48,10 @@ User selected always including printable end caps alongside the existing CNC pro
 - Preview is dimensioned 2D SVG, not a 3D render. Cutout overlap warnings do not validate electronics bodies or wiring. This limitation is included in tool instructions/results.
 - Public stateless endpoint is bounded to 256 KiB and 64 cutouts per face, plus rate limiting. Larger projects remain usable in the browser.
 - Manifold precompiled WASM successfully generated a complete package in local workerd. Production validation recorded separately at release.
+
+## wrong.rodeo interface refresh
+
+- User requested the reference site's design system across the app: exact metal/ink/vermilion palette, Bricolage Grotesque display headings and Instrument Sans body.
+- User requested a thinner banner, removing unnecessary padding and second-line subtitle. Desktop header is 54 px with ~32 px controls; save status is a compact accessible indicator.
+- Latest correction supersedes keeping the old green default: NEW projects use blue-gray #71808A. Walnut stays the default cap material. Existing project colors remain unchanged.
+- Controls, coordinates, geometry, project format and manufacturing workflow remain unchanged. Responsive stacked header on narrow screens is retained to keep actions usable.
