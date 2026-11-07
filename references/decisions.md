@@ -23,3 +23,7 @@
 Implemented: two layout editors, rectangle/circle primitives, selection/grouping/copy/paste, independent row/grid repetition, project component library, local save and JSON import/export, symmetric parametric solid model, hardware clearances and dedicated bottom bosses, corner styles, cap overhang, interactive assembly/exploded preview, procedural wood appearance, printable STL orientation, SVG/DXF cutouts, tape-only Masuter end-cap CAM and ZIP packaging.
 
 The hardware margin is dynamic (at least 12 mm, larger for thicker walls/corners). Bottom screw centers move inward with wall thickness so their countersinks stay within the plate. Printable geometries have mathematical checks; physical commissioning remains separate. See validation.md for actual test coverage.
+
+## Reinforcement revision — 2026-11-07
+
+User requested internal chamfers at the screw-rail/wall junctions to match the reference. The shell now includes continuous 45-degree webs on both sides of each rail's front/rear wall connection, plus the upper rails' control-surface connections. Webs overlap the faceted cylinders and wall to avoid tangent-only seams and trapped cavities. The existing exterior, pilot centers, caps and bottom recess remain driven by the same parameters. Dynamic protected layout margin is now at least 18 mm to reserve space for reinforcement.

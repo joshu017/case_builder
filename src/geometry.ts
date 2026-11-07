@@ -23,6 +23,19 @@ export function softened(poly:Vec2[], amount:number, mode:string):Vec2[] {
  }
  return out;
 }
+/** Continuous 45-degree webs; overlap the faceted rail by 0.05 mm to avoid tangent-only seams. */
+export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radius=4.3):Vec2[][] {
+ const distance=(center[0]-wallPoint[0])*inward[0]+(center[1]-wallPoint[1])*inward[1];
+ const tangent:Vec2=[-inward[1],inward[0]], overlap=0.25, reach=radius/Math.sqrt(2)-0.05;
+ const origin:Vec2=[center[0]-distance*inward[0],center[1]-distance*inward[1]];
+ const at=(u:number,v:number):Vec2=>[origin[0]+u*tangent[0]+v*inward[0],origin[1]+u*tangent[1]+v*inward[1]];
+ return [-1,1].map(sign=>{
+  const points=[at(sign*(distance+2*reach+overlap),-overlap),at(sign*reach,distance+reach),at(0,-overlap)];
+  const [a,b,c]=points;
+  if((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])<0)points.reverse();
+  return points;
+ });
+}
 export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
  const errors=issues(p);if(errors.length)throw Error(errors[0]);
  const objects:(Manifold|CrossSection)[]=[];
@@ -50,7 +63,14 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
   const topOffset=e.wall/d.c;
   const inner=cross([[e.wall,-20],[d.depth-e.wall,-20],[d.depth-e.wall,e.height-e.wall*d.t-topOffset],[e.wall,e.height-d.rise+e.wall*d.t-topOffset]]);
   let shell=cut(outer,yz(extrude(inner,d.width)));
-  for(const [y,z] of screwCenters(p))shell=add(shell,move(rotate(cyl(d.width,4.3),[0,90,0]),[0,y,z]));
+  for(const [i,center] of screwCenters(p).entries()) {
+   const [y,z]=center;
+   shell=add(shell,move(rotate(cyl(d.width,4.3),[0,90,0]),[0,y,z]));
+   const front=i===0||i===3;
+   const webs=railWallChamfers(center,[front?e.wall:d.depth-e.wall,0],[front?1:-1,0]);
+   if(i>=2)webs.push(...railWallChamfers(center,[0,e.height-d.rise-topOffset],[d.s,-d.c]));
+   for(const triangle of webs)shell=add(shell,yz(extrude(cross(triangle),d.width)));
+  }
   for(const [x,y] of bottomCenters(p))shell=add(shell,bottomFrame(move(cyl(9,4.3),[x,y,e.plate])));
   shell=keep(shell.intersect(outer));
   const plateY=e.wall/d.c+0.25, plateDepth=d.surfaceDepth-2*plateY;

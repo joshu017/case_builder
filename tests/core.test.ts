@@ -20,3 +20,13 @@ test('thin front and hardware-margin cutouts block geometry exports',()=>{const 
 test('CAM compensates outside contours, respects stepdown, emits modal reset and retracts before travel',()=>{const p=newProject(),a=buildAssembly(wasm,p);for(const tool of [1.5875,3.175]){p.machining.tool=tool;const cam=makeToolpath(p,a.capOutline,a.screwCenters);assert.match(cam.code,/G21 G17 G90 G94 G54/);assert.match(cam.code,/G40 G49 G80/);assert.match(cam.code,/M5\nM9\nM2\n$/);assert.doesNotMatch(cam.code,/G28|G30|M6|\$H|\$X/);let z=Infinity,minimum=0,lastCutZ=0;for(const line of cam.code.split('\n')){const match=line.match(/ Z(-?[\d.]+)/);if(line.startsWith('G0 X'))assert.ok(z>=p.machining.safeZ);if(match){const next=Number(match[1]);if(next<0&&z>=0)lastCutZ=0;if(next<0){assert.ok(lastCutZ-next<=p.machining.stepDown+1e-4);lastCutZ=next;}z=next;minimum=Math.min(minimum,z);}}close(minimum,-6.2);assert.ok(cam.width<400&&cam.height<380);}assert.deepEqual(offsetConvex([[0,0],[10,0],[10,10],[0,10]],1),[[-1,-1],[11,-1],[11,11],[-1,11]]);});
 test('ZIP includes reloadable project, valid binary STLs, CNC and unit-aware SVG/DXF',()=>{const p=newProject(),a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));assert.deepEqual(parseProject(strFromU8(files['project.json'])),p);for(const file of ['extrusion.stl','bottom-plate.stl']){const b=files[file],view=new DataView(b.buffer,b.byteOffset,b.byteLength);assert.equal(b.length,84+50*view.getUint32(80,true));}assert.match(strFromU8(files['end-cap.nc']),/ONE cap per setup/);assert.match(layoutSVG(p,'control'),/width="180mm"/);assert.match(layoutDXF(p,'control'),/\$INSUNITS\n70\n4/);assert.ok(stl(a.left).length>84);});
 test('thick walls reserve extra hardware margin; bottom countersinks stay inside the plate',()=>{for(const wall of [2,6])for(const plate of [2,5]){const p=newProject();Object.assign(p.enclosure,{wall,plate});const a=buildAssembly(wasm,p);valid(a.shell);valid(a.bottom);const d=dimensions(p),margin=wall/d.c+0.25;for(const [,y] of bottomCenters(p)){assert.ok(y-3.2>margin);assert.ok(y+3.2<d.surfaceDepth-margin);}}});
+test('screw rails have continuous diagonal reinforcement into front and rear walls',()=>{
+ const p=newProject(),a=buildAssembly(wasm,p),s=solid(a.shell),d=dimensions(p);
+ // Outside the original 4.3 mm-radius rail and inner wall, but inside the new web.
+ for(const y of [4,d.depth-4]) {
+  const center=screwCenters(p).find(q=>Math.abs(q[0]-(y<d.depth/2?6:d.depth-6))<0.01 && q[1]<25)!;
+  const probe=wasm.Manifold.cube([d.width-40,0.2,0.2]).translate([20,y,center[1]+5]);
+  const overlap=s.intersect(probe);close(overlap.volume(),probe.volume(),0.001);overlap.delete();probe.delete();
+ }
+ s.delete();
+});
