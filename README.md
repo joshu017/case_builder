@@ -17,7 +17,7 @@ Open http://127.0.0.1:5173/ . Requires a modern browser with WebAssembly; the op
 2. Save selected cutouts to the component library. Insert the same component on **Back**. Library entries are embedded in this project, not shared through a server.
 3. Change rear height, footprint, total angle, wall/plate thickness, cap overhang and corner style. Choose automatic dimensions to derive the footprint from cutout extents and padding.
 4. Inspect **Assembly**. Drag to rotate; scroll to zoom; toggle exploded view. Appearance includes plastic color and four procedural wood textures.
-5. Review **Manufacturing**, then export the ZIP. It includes print-oriented STL files, cutout SVG/DXF files, a one-cap GRBL program, a setup README, and self-contained project JSON.
+5. Review **Manufacturing**, then export the ZIP. It includes print-oriented STL files for the extrusion, bottom plate and both end caps, cutout SVG/DXF files, a one-cap GRBL program, a setup README, and self-contained project JSON.
 6. Download **Save project**, then reload it using **Open project**. Browser local storage is convenient but is not a backup.
 
 Rectangle/circle sizes are cutout dimensions, not verified physical component models. The library starts empty pending actual hardware dimensions from the user. Decorative wood edge bevels, per-cutout bevels, clamp fixtures, and multi-user accounts are outside this initial build. Pattern copies are independent after generation, not live constraint-linked arrays.

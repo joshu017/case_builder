@@ -25,3 +25,6 @@ Production target: https://joshjacobson.net/casebuilder/ in the Josh@joshjacobso
 ## Screw-rail reinforcement and bottom hardware
 The large tangent webs were rejected as too bulky. Use small 1.25 mm internal 45-degree chamfers measured along the wall from the rail/wall intersection, not a tangent brace across the whole rail. Keep the pilot centers, exterior and bottom fit unchanged; minimum dynamic layout margin is 13 mm.
 Bottom screws are M3x6 flathead as in the user's photo. Model flush conical heads, not cylindrical button heads. Assumed countersink: 90° included angle, 6.4 mm mouth, 3.4 mm clearance bore, 1.5 mm deep. Actual head dimensions are not supplied; do not claim exact hardware fit. At the default 3 mm plate plus 0.25 mm clearance, nominal thread engagement is 2.75 mm. Flag thicker plates as needing longer screws.
+
+## End-cap exports
+Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc in the package; no manufacturing-mode toggle. Print caps inner-face down with screw recesses upward, minimum Z=0. Use the same cap solids, thickness, overhang and holes as the assembly/CNC geometry. Thickness remains the existing woodThickness project parameter for compatibility.

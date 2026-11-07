@@ -18,7 +18,7 @@ test('pilot bores and bottom plate holes align; countersinks face outward',()=>{
 test('six-screw plate, zero overhang and angle zero remain valid',()=>{const p=newProject();p.enclosure.screws=6;p.enclosure.overhang=0;p.enclosure.angle=0;const a=buildAssembly(wasm,p);[a.shell,a.bottom,a.left].forEach(valid);assert.equal(bottomCenters(p).length,6);});
 test('thin front and hardware-margin cutouts block geometry exports',()=>{const p=newProject();p.enclosure.height=25;assert.ok(issues(p).length);assert.throws(()=>buildAssembly(wasm,p));p.enclosure.height=50;p.layouts.control=[{id:'s',kind:'rect',name:'slot',x:1,y:10,w:10,h:5}];assert.ok(issues(p).length);});
 test('CAM compensates outside contours, respects stepdown, emits modal reset and retracts before travel',()=>{const p=newProject(),a=buildAssembly(wasm,p);for(const tool of [1.5875,3.175]){p.machining.tool=tool;const cam=makeToolpath(p,a.capOutline,a.screwCenters);assert.match(cam.code,/G21 G17 G90 G94 G54/);assert.match(cam.code,/G40 G49 G80/);assert.match(cam.code,/M5\nM9\nM2\n$/);assert.doesNotMatch(cam.code,/G28|G30|M6|\$H|\$X/);let z=Infinity,minimum=0,lastCutZ=0;for(const line of cam.code.split('\n')){const match=line.match(/ Z(-?[\d.]+)/);if(line.startsWith('G0 X'))assert.ok(z>=p.machining.safeZ);if(match){const next=Number(match[1]);if(next<0&&z>=0)lastCutZ=0;if(next<0){assert.ok(lastCutZ-next<=p.machining.stepDown+1e-4);lastCutZ=next;}z=next;minimum=Math.min(minimum,z);}}close(minimum,-6.2);assert.ok(cam.width<400&&cam.height<380);}assert.deepEqual(offsetConvex([[0,0],[10,0],[10,10],[0,10]],1),[[-1,-1],[11,-1],[11,11],[-1,11]]);});
-test('ZIP includes reloadable project, valid binary STLs, CNC and unit-aware SVG/DXF',()=>{const p=newProject(),a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));assert.deepEqual(parseProject(strFromU8(files['project.json'])),p);for(const file of ['extrusion.stl','bottom-plate.stl']){const b=files[file],view=new DataView(b.buffer,b.byteOffset,b.byteLength);assert.equal(b.length,84+50*view.getUint32(80,true));}assert.match(strFromU8(files['end-cap.nc']),/ONE cap per setup/);assert.match(layoutSVG(p,'control'),/width="180mm"/);assert.match(layoutDXF(p,'control'),/\$INSUNITS\n70\n4/);assert.ok(stl(a.left).length>84);});
+test('ZIP includes reloadable project, valid binary STLs, CNC and unit-aware SVG/DXF',()=>{const p=newProject(),a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));assert.deepEqual(parseProject(strFromU8(files['project.json'])),p);for(const file of ['extrusion.stl','bottom-plate.stl','end-cap-left.stl','end-cap-right.stl']){const b=files[file],view=new DataView(b.buffer,b.byteOffset,b.byteLength);assert.equal(b.length,84+50*view.getUint32(80,true));}assert.match(strFromU8(files['end-cap.nc']),/ONE cap per setup/);assert.match(layoutSVG(p,'control'),/width="180mm"/);assert.match(layoutDXF(p,'control'),/\$INSUNITS\n70\n4/);assert.ok(stl(a.left).length>84);});
 test('thick walls reserve extra hardware margin; bottom countersinks stay inside the plate',()=>{for(const wall of [2,6])for(const plate of [2,5]){const p=newProject();Object.assign(p.enclosure,{wall,plate});const a=buildAssembly(wasm,p);valid(a.shell);valid(a.bottom);const d=dimensions(p),margin=wall/d.c+0.25;for(const [,y] of bottomCenters(p)){assert.ok(y-3.2>margin);assert.ok(y+3.2<d.surfaceDepth-margin);}}});
 test('small rail chamfers reinforce the junction without broad braces',()=>{
  const p=newProject(),a=buildAssembly(wasm,p),s=solid(a.shell),d=dimensions(p);
@@ -39,4 +39,28 @@ test('bottom flathead seats taper at 90 degrees on the outside face',()=>{
  const clear=b.rayCast(at(2.5,0.1),at(2.5,0.6));assert.equal(clear.length,0);
  const crossing=b.rayCast(at(2.5,0.6),at(2.5,0.8));assert.equal(crossing.length,1);
  close(6-p.enclosure.plate-0.25,2.75);b.delete();
+});
+
+test('both cap STLs lie flat with screw-head recesses upward',()=>{
+ for(const thickness of [4,6,10]) {
+  const p=newProject();p.enclosure.woodThickness=thickness;
+  const a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));
+  const minY=Math.min(...a.capOutline.map(q=>q[0])),minZ=Math.min(...a.capOutline.map(q=>q[1])),maxZ=Math.max(...a.capOutline.map(q=>q[1]));
+  for(const side of ['left','right']) {
+   const bytes=files[`end-cap-${side}.stl`],view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),vertices:number[]=[],indices:number[]=[],ids=new Map<string,number>();
+   for(let t=0;t<view.getUint32(80,true);t++)for(let k=0;k<3;k++) {
+    const pos=[0,1,2].map(c=>view.getFloat32(84+t*50+12+k*12+c*4,true)),key=pos.join(',');
+    if(!ids.has(key)){ids.set(key,vertices.length/3);vertices.push(...pos);}indices.push(ids.get(key)!);
+   }
+   const s=solid({positions:new Float32Array(vertices),indices:new Uint32Array(indices),volume:1});
+   assert.equal(s.status(),'NoError');close(s.boundingBox().min[2],0);close(s.boundingBox().max[2],thickness);
+   close(s.volume(),a[side==='left'?'left':'right'].volume,0.1);
+   for(const [y,z] of a.screwCenters) {
+    const x=y-minY+2,yy=side==='left'?maxZ-z:z-minZ;
+    assert.equal(s.rayCast([x,yy,thickness-2.5],[x,yy,thickness+1]).length,0,'recess opens upward');
+    assert.equal(s.rayCast([x,yy,0.1],[x,yy,thickness+1]).length,1,'recess has a solid floor');
+   }
+   s.delete();
+  }
+ }
 });
