@@ -27,3 +27,11 @@ The hardware margin is dynamic (at least 12 mm, larger for thicker walls/corners
 ## Reinforcement revision — 2026-11-07
 
 User requested internal chamfers at the screw-rail/wall junctions to match the reference. The shell now includes continuous 45-degree webs on both sides of each rail's front/rear wall connection, plus the upper rails' control-surface connections. Webs overlap the faceted cylinders and wall to avoid tangent-only seams and trapped cavities. The existing exterior, pilot centers, caps and bottom recess remain driven by the same parameters. Dynamic protected layout margin is now at least 18 mm to reserve space for reinforcement.
+
+## Reduced reinforcement and M3x6 bottom screws — 2026-11-07
+
+The user rejected the large tangent braces as too bulky. Replace them with 1.25 mm chamfers at the existing wall/cylinder intersections; reserve a minimum 13 mm hardware margin. Small bonded overlaps prevent disconnected slivers and internal cavities. This supersedes the earlier full tangent-web design.
+
+The user's bottom screw photo specifies M3x6 flathead but no head diameter/angle. Retain the 90-degree, 6.4 mm mouth / 3.4 mm bore / 1.5 mm deep exterior countersinks and make the hardware preview conical with 6 mm overall length. Existing STL seats were already countersunk; the old preview's cylindrical heads were misleading. Nominal default engagement is 6 - 3 - 0.25 = 2.75 mm. Warn on thicker plates to select longer screws. Actual fit remains unverified without the hardware dimensions/print test.
+
+Manufacturer references confirm head sizes vary: https://www.accu.co.uk/phillips-countersunk-screws/989273-SIK-M3-6-CS-BZP lists a 90-degree head and 5.6 mm diameter; https://www.accu.co.uk/countersunk-socket-head-screws/770509-ZF602M3X6-LOW lists 6 mm diameter. These are references for the assumption, not identification of the photographed screw.

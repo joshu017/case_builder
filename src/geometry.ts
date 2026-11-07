@@ -23,14 +23,19 @@ export function softened(poly:Vec2[], amount:number, mode:string):Vec2[] {
  }
  return out;
 }
-/** Continuous 45-degree webs; overlap the faceted rail by 0.05 mm to avoid tangent-only seams. */
+/** Small 1.25 mm chamfers at wall/rail intersections, with a bonded overlap. */
 export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radius=4.3):Vec2[][] {
  const distance=(center[0]-wallPoint[0])*inward[0]+(center[1]-wallPoint[1])*inward[1];
- const tangent:Vec2=[-inward[1],inward[0]], overlap=0.25, reach=radius/Math.sqrt(2)-0.05;
+ const tangent:Vec2=[-inward[1],inward[0]], overlap=0.25;
+ const intersection=Math.sqrt(Math.max(0,radius*radius-distance*distance));
+ const run=Math.max(intersection+1.25,distance-radius+1.25);
+ // Intersect the 45-degree line u+v=run with the near circle surface.
+ const discriminant=(run+distance)**2-2*(run*run+distance*distance-radius*radius);
+ const depth=(run+distance-Math.sqrt(Math.max(0,discriminant)))/2+0.1;
  const origin:Vec2=[center[0]-distance*inward[0],center[1]-distance*inward[1]];
  const at=(u:number,v:number):Vec2=>[origin[0]+u*tangent[0]+v*inward[0],origin[1]+u*tangent[1]+v*inward[1]];
  return [-1,1].map(sign=>{
-  const points=[at(sign*(distance+2*reach+overlap),-overlap),at(sign*reach,distance+reach),at(0,-overlap)];
+  const points=[at(sign*(run+overlap),-overlap),at(sign*(run-depth),depth),at(0,-overlap)];
   const [a,b,c]=points;
   if((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])<0)points.reverse();
   return points;
@@ -81,7 +86,8 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
   for(const [x,y] of bottomCenters(p)) {
     shell=cut(shell,bottomFrame(move(cyl(e.plate+11,1.25),[x,y,-1])));
     bottom=cut(bottom,move(cyl(e.plate+2,1.7),[x,y,-1]));
-    bottom=cut(bottom,move(cyl(1.6,3.3,1.7),[x,y,-0.1]));
+    const boreRadius=1.7, headRadius=3.2, sinkDepth=headRadius-boreRadius; // 90° included angle
+    bottom=cut(bottom,move(cyl(sinkDepth+0.1,headRadius+0.1,boreRadius),[x,y,-0.1]));
   }
   for(const [y,z] of screwCenters(p)) {
    shell=cut(shell,move(rotate(cyl(8.1,1.25),[0,90,0]),[-0.1,y,z]));

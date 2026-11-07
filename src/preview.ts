@@ -25,7 +25,15 @@ export class Preview {
  // Hardware heads are visual representations; actual clearances live in the solid model.
  const head=(pos:THREE.Vector3,axis:THREE.Vector3,r=2.75,h=2.6)=>{const g=new THREE.CylinderGeometry(r,r,h,24),mat=new THREE.MeshStandardMaterial({color:0x33383a,metalness:0.65,roughness:0.35}),m=new THREE.Mesh(g,mat);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);m.position.copy(pos);this.group.add(m);};
  for(const [y,z] of screwCenters(p)){head(new THREE.Vector3(-p.enclosure.woodThickness+1.5-(exploded?25:0),y,z),new THREE.Vector3(1,0,0));head(new THREE.Vector3(d.width+p.enclosure.woodThickness-1.5+(exploded?25:0),y,z),new THREE.Vector3(1,0,0));}
- for(const [x,y] of bottomCenters(p))head(new THREE.Vector3(x,y*d.c+0.3*d.s,d.rise-y*d.s+0.3*d.c-(exploded?25:0)),new THREE.Vector3(0,d.s,d.c),3,0.6);
+ for(const [x,y] of bottomCenters(p)) {
+  const axis=new THREE.Vector3(0,d.s,d.c),outside=new THREE.Vector3(x,y*d.c,d.rise-y*d.s-(exploded?25:0));
+  const screwPart=(rTop:number,rBottom:number,height:number,offset:number)=>{
+   const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBottom,height,32),new THREE.MeshStandardMaterial({color:0x33383a,metalness:0.65,roughness:0.35}));
+   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);mesh.position.copy(outside).addScaledVector(axis,offset);this.group.add(mesh);
+  };
+  screwPart(1.5,3,1.5,0.75); // flush flat head, tapering inward
+  screwPart(1.5,1.5,4.5,3.75); // M3 x 6 overall length, including head
+ }
  if(!this.fitted){this.fit(p);this.fitted=true;}
  }
  fit(p:Project){const d=dimensions(p),r=Math.max(d.width,d.depth)*1.7;this.controls.target.set(d.width/2,d.depth/2,p.enclosure.height/2);this.camera.position.set(d.width/2+r,d.depth/2-r,p.enclosure.height+r*0.8);this.controls.update();}

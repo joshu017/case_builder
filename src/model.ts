@@ -32,7 +32,7 @@ export function bottomCenters(p:Project):[number,number][] {
   const xs=p.enclosure.screws===6?[14,d.width/2,d.width-14]:[14,d.width-14];
   return xs.flatMap(x=>ys.map(y=>[x,y] as [number,number]));
 }
-export function layoutMargin(p:Project) { const e=p.enclosure; return Math.max(18,2*Math.max(6,e.wall+3,e.radius+3)-e.wall+9); }
+export function layoutMargin(p:Project) { const e=p.enclosure; return Math.max(13,Math.max(6,e.wall+3,e.radius+3)+6); }
 export function issues(p:Project):string[] {
  const e=p.enclosure,d=dimensions(p), margin=layoutMargin(p), out:string[]=[];
  if(d.frontHeight<22) out.push('Front height must be at least 22 mm for the screw rails. Increase rear height or reduce depth / total angle.');
