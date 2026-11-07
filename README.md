@@ -41,3 +41,7 @@ pnpm security:all
 `src/model.ts`: versioned project data and validation. `src/geometry.ts`: shared Manifold solids. `src/cam.ts`: isolated Masuter postprocessor. `src/export.ts`: STL/SVG/DXF/JSON/ZIP. `src/main.ts`: editor. `src/preview.ts`: Three.js assembly.
 
 Cloudflare Workers assets deployment is configured in `wrangler.jsonc`. No database, accounts or backend API is required for this local-first MVP. The production route is https://joshjacobson.net/casebuilder/ . A minimal Worker maps this path to the static asset binding. The domain belongs to the Josh account; supply its account ID through the deployment environment. Authenticated Snyk SCA/SAST are release gates; CI does not hold credentials or deploy automatically.
+
+## LLM-assisted design (MCP)
+
+The same Worker exposes a stateless Streamable HTTP MCP server at **https://joshjacobson.net/casebuilder/mcp**. Add this URL to a compatible MCP client; no authentication is required. Tools create and edit portable projects, place components, validate geometry, preview dimensioned layouts, and export the complete manufacturing ZIP. Save returned project JSON and use **Open project** in the editor. See [MCP workflow and limits](references/mcp.md).

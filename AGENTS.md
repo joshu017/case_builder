@@ -2,7 +2,7 @@
 
 ## Product and terminology
 - A local-first electronics enclosure designer, initially focused on MIDI control surfaces.
-- Control surface = upper sloped face; back = wide vertical face; front = narrow vertical face; end caps = wooden left/right closures; bottom plate = removable lower sloped face.
+- Control surface = upper sloped face; back = wide vertical face; front = narrow vertical face; end caps = printed or wooden left/right closures; bottom plate = removable lower sloped face.
 - CRITICAL: symmetric trapezoid. The TOTAL included angle is 10 degrees, split into +5 / -5 degree faces about its centerline. Never interpret this as 10 degrees on each face or a horizontal bottom.
 - Rear height defaults to 50 mm and is user adjustable. It is the exterior height at the wide back, not internal clearance. Reject profiles with insufficient front height.
 - Wood thickness 6 mm; cap overhang 1.5 mm, configurable to zero. Rounded/chamfered profile corners should match shell and cap. Cosmetic bevel on wood thickness edges is outside MVP CAM.
@@ -19,7 +19,7 @@ Use Context7 resolve-library-id then query-docs for current library/API document
 
 ## Workspace and deployment
 User-selected repository: joshu017/case_builder. Preserve reference/ images. Exclude FoxAlien_Masuter_V2.0/ from Git; distilled notes go in references/foxalien_masuter.md.
-Follow ~/workers conventions: pnpm, TypeScript, credential-free CI, manual Cloudflare Workers deployment, no account IDs or credentials committed. This MVP uses static assets and a minimal Worker to strip the /casebuilder prefix; no Hono API or database is needed.
+Follow ~/workers conventions: pnpm, TypeScript, credential-free CI, manual Cloudflare Workers deployment, no account IDs or credentials committed. The Worker serves static assets and a stateless MCP endpoint at /casebuilder/mcp; no database is needed.
 Production target: https://joshjacobson.net/casebuilder/ in the Josh@joshjacobson.net account, verified from zone ownership. The user explicitly authorized deployment on 2026-11-07 after Snyk scanning. Keep the account ID in the deployment environment only. Before release run Snyk SCA including dev dependencies and SAST with high severity thresholds; unavailable/failed scans block release. Do not put credentials in GitHub Actions. Local testing does not require deployment approval. Ask for outward-facing push/deploy approval only after the result is reviewable, per ~/workers/AGENTS.md.
 
 ## Screw-rail reinforcement and bottom hardware
@@ -28,3 +28,11 @@ Bottom screws are M3x6 flathead as in the user's photo. Model flush conical head
 
 ## End-cap exports
 Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc in the package; no manufacturing-mode toggle. Print caps inner-face down with screw recesses upward, minimum Z=0. Use the same cap solids, thickness, overhang and holes as the assembly/CNC geometry. Thickness remains the existing woodThickness project parameter for compatibility.
+
+## MCP design tools
+- The same Worker serves Streamable HTTP at /casebuilder/mcp. Public, stateless, no saved projects or browser localStorage access. Pass complete portable project JSON on every call.
+- Reuse model, geometry, CAM and export code; do not create a divergent LLM-only geometry implementation. Serve the same four STLs and cap G-code.
+- Geometry uses precompiled Manifold WASM via instantiateWasm. Wrangler defines globalThis.process as undefined so Emscripten does not select its Node filesystem loader in Workers; nodejs_compat supports bundled dependencies.
+- Return dimensioned 2D SVG previews honestly labelled as such, not 3D or electronics-clearance checks. Overlapping cutouts are warnings because compound openings may be intentional.
+- MCP request limit 256 KiB; 64 shapes per face/component. Rate limit 60 requests per IP per minute per Cloudflare location. No supplied code execution, arbitrary URL fetch, machine control, accounts or persistent artifacts.
+- Validate real MCP client initialize/list/call flows and export in workerd before release. scripts/check-mcp.ts accepts a local or production endpoint.

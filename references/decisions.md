@@ -39,3 +39,12 @@ Manufacturer references confirm head sizes vary: https://www.accu.co.uk/phillips
 ## Both cap manufacturing formats — 2026-11-07
 
 User selected always including printable end caps alongside the existing CNC program, with no mode selector. ZIP now contains end-cap-left.stl and end-cap-right.stl in addition to extrusion.stl, bottom-plate.stl and end-cap.nc. Caps use existing assembly geometry and thickness/overhang/hole settings, rotated flat with the inner face on the bed and head recesses upward. The existing wood thickness setting also controls printed cap thickness. End-cap printer bounds are checked separately. Export regression tests reconstruct both STL meshes and verify volume, thickness, minimum Z, and upward-open recesses at three thicknesses.
+
+## MCP on the existing Worker
+
+- User approved adding LLM-assisted design through the same Worker after reviewing the proposed stateless design.
+- Implement seven tools: create_project, update_enclosure, place_component, replace_layout, validate_project, preview_project, export_package. Use existing project/geometry/CAM/export code.
+- No accounts or persistence for MVP. Full project JSON travels with requests; embedded ZIP/SVG resources travel with responses. Browser handoff uses Open project, not live synchronization.
+- Preview is dimensioned 2D SVG, not a 3D render. Cutout overlap warnings do not validate electronics bodies or wiring. This limitation is included in tool instructions/results.
+- Public stateless endpoint is bounded to 256 KiB and 64 cutouts per face, plus rate limiting. Larger projects remain usable in the browser.
+- Manifold precompiled WASM successfully generated a complete package in local workerd. Production validation recorded separately at release.

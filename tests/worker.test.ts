@@ -19,3 +19,10 @@ test('worker does not serve app outside its exact path namespace', async () => {
   assert.equal((await worker.fetch(new Request(`https://joshjacobson.net${path}`), env)).status, 404);
  }
 });
+
+test('MCP rate limit is enforced without changing static asset access', async () => {
+ const limited={...env,MCP_RATE_LIMIT:{async limit(){return {success:false};}}};
+ const r=await worker.fetch(new Request('https://joshjacobson.net/casebuilder/mcp'),limited);
+ assert.equal(r.status,429);assert.equal(r.headers.get('retry-after'),'60');
+ assert.equal((await worker.fetch(new Request('https://joshjacobson.net/casebuilder/'),limited)).status,200);
+});
