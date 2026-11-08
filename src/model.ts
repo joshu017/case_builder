@@ -9,7 +9,16 @@ export type Project = {
   layouts: Record<Face, Shape[]>; components: Component[];
 };
 /** Nominal USB-C receptacle clearance opening; adjust to the actual connector. */
-export function defaultComponents():Component[]{return [{id:'builtin-usb-c-port',name:'USB-C port · 9.4 × 3.6 mm',shapes:[{id:'usb-c-opening',name:'USB-C port',kind:'rect',x:0,y:0,w:9.4,h:3.6,corner:'fillet',radius:1.8}]}];}
+export function defaultComponents():Component[]{return [
+ {id:'builtin-usb-c-port',name:'USB-C port · 9.4 × 3.6 mm',shapes:[{id:'usb-c-opening',name:'USB-C port',kind:'rect',x:0,y:0,w:9.4,h:3.6,corner:'fillet',radius:1.8}]},
+ // User drawing: 75 × 9 body, 60 travel, 71 mounting pitch, M2 threads.
+ // Panel clearances and fence allowance are editable assumptions, not drawing dimensions.
+ {id:'builtin-behringer-fader-60mm',name:'Behringer-style fader · 60 mm travel',shapes:[
+  {id:'fader-slot',name:'Fader slot · 66 × 3 mm',kind:'rect',x:3,y:4.5,w:3,h:66,corner:'fillet',radius:1.5,guide:{innerWidth:9.4,innerHeight:75.4,wall:1,height:2,offsetX:0,offsetY:0}},
+  {id:'fader-mount-front',name:'M2 mounting clearance',kind:'circle',x:3.4,y:.9,w:2.2,h:2.2},
+  {id:'fader-mount-back',name:'M2 mounting clearance',kind:'circle',x:3.4,y:71.9,w:2.2,h:2.2}
+ ]}
+];}
 export function componentLibrary(p:Project):Component[]{return [...defaultComponents().filter(c=>!p.components.some(saved=>saved.id===c.id)),...p.components];}
 export const uid = () => crypto.randomUUID();
 export function newProject(): Project {

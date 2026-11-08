@@ -51,3 +51,10 @@ test('cross-origin and oversized MCP requests are rejected',async()=>{
  const large=await handleMcp(new Request('https://example.com/casebuilder/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:' '.repeat(256*1024+1)}),build);assert.equal(large.status,413);
 });
 test('MCP places built-in USB-C and embeds its definition for portable projects',async()=>{const placed=await call('place_component',{project:newProject(),face:'back',x:40,y:20,componentId:'builtin-usb-c-port'});assert.ok(!placed.isError);const p=placed.structuredContent.project;assert.equal(p.components[0].id,'builtin-usb-c-port');assert.equal(p.layouts.back[0].guide,undefined);assert.equal(p.layouts.back[0].radius,1.8);assert.equal((await call('validate_project',{project:p})).structuredContent.validation.valid,true);});
+
+ test('pictured Behringer fader places as a portable group with 71 mm mounting pitch and one body fence',async()=>{
+ const placed=await call('place_component',{project:newProject(),face:'control',x:40,y:15,componentId:'builtin-behringer-fader-60mm'});assert.ok(!placed.isError);
+ const p=placed.structuredContent.project,shapes=p.layouts.control;assert.equal(shapes.length,3);assert.equal(new Set(shapes.map((q:any)=>q.group)).size,1);assert.ok(shapes[0].group);
+ assert.equal(shapes.filter((q:any)=>q.guide).length,1);assert.deepEqual(shapes[0].guide,{innerWidth:9.4,innerHeight:75.4,wall:1,height:2,offsetX:0,offsetY:0});assert.ok(Math.abs(shapes[2].y-shapes[1].y-71)<1e-9);
+ assert.equal(p.components[0].id,'builtin-behringer-fader-60mm');assert.equal((await call('validate_project',{project:p})).structuredContent.validation.valid,true);
+ });

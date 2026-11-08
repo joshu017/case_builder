@@ -99,3 +99,9 @@ The user approved the complete editor/guide/toolbar revision for deployment; rel
 - Add a global default USB-C preset available alongside existing custom libraries. Nominal clearance opening: 9.4 × 3.6 mm, fillet R1.8, no guide/fence. Inserted definitions are embedded into the project; custom definitions with the same ID are preserved.
 - Reference: Amphenol 10168357 receptacle drawing https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/10168357.pdf. Connector interface and shell dimensions differ from panel clearance; the selected preset is a practical editable clearance allowance, not a guaranteed fit for every connector or cable overmold.
 - Browser verified an edited cutout Width advances to Height; Shift+Tab returns to Width without losing the committed decimal value. This revision is local pending review.
+
+## Pictured Behringer-style fader
+
+- Requested “100 mm” conflicts with supplied drawing: body 75 × 9 mm, travel 60 mm, two M2 threaded mounts 71 mm apart. Follow drawing and label library entry 60 mm travel; a true 100 mm part needs its own dimensions.
+- Default vertical orientation suits a mixer; slot and two mounting holes form a group on placement. One centered guide surrounds the full body. Body thickness shown as 7 mm is not the fence height: retain a shallow 2 mm alignment fence.
+- Assumed editable manufacturing clearances: slot 66 × 3 mm R1.5 (60 travel + 5 mm stem length + 1 mm total clearance), Ø2.2 M2 panel holes, body cavity 75.4 × 9.4 mm (0.2 mm per side), wall 1 mm. Drawing does not specify a panel cutout or print tolerances; physical fit remains untested. Preset is available globally and embedded on placement, including MCP, without changing existing projects.
