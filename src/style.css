@@ -82,11 +82,11 @@ h1{font-family:var(--display);font-size:32px;line-height:1.05;letter-spacing:-1.
 #notice:not(:empty){margin-bottom:15px;padding:11px 13px;border:1px solid var(--line);border-radius:5px;font-size:12px;line-height:1.6;background:var(--metal-hi);color:var(--ink-2)}
 #notice.error,.error{background:#fff0eb;color:#9b2c16;border-color:#e8ae9e}
 .loading{color:var(--muted)}
-#editor-wrap{background:var(--metal-hi);border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 3px 0 #10141809}
-.editor-toolbar{display:flex;justify-content:space-between;gap:5px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--metal-hi)}
+#editor-wrap{min-height:0;display:flex;flex-direction:column;background:transparent}
+.editor-toolbar{display:flex;justify-content:space-between;gap:5px;padding:6px 0 10px;border-bottom:1px solid var(--line);background:transparent}
 .editor-toolbar>div{display:flex;gap:5px}
 .editor-toolbar button{font-size:11px;padding:7px 10px}
-.drawing{height:clamp(320px,49vh,620px);padding:8px;background-color:#d3dde4;background-image:radial-gradient(#aab8c3 .65px,transparent .65px);background-size:12px 12px}
+.drawing{height:clamp(320px,49vh,620px);padding:8px;background:transparent}
 #canvas{width:100%;height:100%;touch-action:none;user-select:none}
 .dimension{font-family:var(--mono);font-size:3px;fill:var(--ink-2)}
 .face-label{font-family:var(--mono);font-size:2.2px;letter-spacing:.4px;fill:var(--muted)}
@@ -94,7 +94,7 @@ h1{font-family:var(--display);font-size:32px;line-height:1.05;letter-spacing:-1.
 .empty-subtitle{font-family:var(--text);font-size:2.8px;fill:#586875;pointer-events:none}
 .cutout{cursor:grab}
 .cutout:active{cursor:grabbing}
-.canvas-footer{padding:8px 12px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);border-top:1px solid var(--line);gap:10px}
+.canvas-footer{padding:8px 0;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);border-top:1px solid var(--line);gap:10px}
 #canvas-size{font-family:var(--mono);color:var(--ink-2)}
 #bottom-info{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;padding:12px 0;border-top:1px solid var(--line)}
 #bottom-info span{font-family:var(--mono);font-size:9px;letter-spacing:.8px;color:var(--muted);display:block;margin-bottom:3px}
@@ -121,7 +121,7 @@ hr{border:0;border-top:1px solid var(--line);margin:10px 0}
 .button-row button{flex:1;padding:7px 5px;font-size:11px}
 .danger{color:#b02c16}
 .full{width:100%;font-size:12px;padding:9px}
-#assembly-wrap{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:radial-gradient(ellipse at 40% 35%,#f4f7f9,#c4cfd7);box-shadow:0 3px 0 #10141809}
+#assembly-wrap{min-height:0;display:flex;flex-direction:column;background:transparent}
 #preview{height:clamp(350px,57vh,700px);width:100%}
 #preview canvas{display:block}
 .preview-controls{display:flex;gap:8px;align-items:center;padding:12px;background:var(--metal-hi);border-top:1px solid var(--line)}
@@ -160,3 +160,28 @@ hr{border:0;border-top:1px solid var(--line);margin:10px 0}
 
 #right-panel hr{margin:7px 0}
 #right-panel>.muted{font-size:10px}
+
+/* Geometry feedback overlays a reserved heading slot and never reflows the canvas. */
+.workspace-heading{position:relative;min-height:58px}
+#notice{position:absolute;left:40%;right:190px;top:50%;transform:translateY(-50%);z-index:5;pointer-events:none;max-height:120px;overflow:auto}
+#notice:not(:empty){margin:0;padding:6px 9px;font-size:11px;line-height:1.35;box-shadow:0 3px 12px #10141818;pointer-events:auto}
+#notice.error{top:100%;left:0;right:0;transform:none}
+input[type=number]{appearance:textfield;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.editor-toolbar{flex-wrap:wrap;align-items:center}
+#layout-tools{gap:2px}
+.editor-toolbar .icon-button{padding:5px;width:29px;height:29px;display:grid;place-items:center}
+.icon-button svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.5;fill:none}
+.marquee{fill:#f0442414;stroke:#f04424;stroke-width:.4;stroke-dasharray:1 1;pointer-events:none}
+#canvas{touch-action:none}
+@media(max-width:850px){#notice{left:0;right:0;top:100%;transform:none}}
+.guide-outline{fill:none;stroke:#527688;stroke-width:.35;stroke-dasharray:1.2 .8}
+
+/* Three direct center rows: heading, work area, information. */
+@media(min-width:851px){
+ .workspace:not([data-view="manufacturing"]){height:calc(100dvh - 92px);min-height:560px;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+ .workspace:not([data-view="manufacturing"]) .drawing{height:auto;min-height:0;flex:1;padding:8px 0}
+ .workspace:not([data-view="manufacturing"]) #preview{height:auto;min-height:0;flex:1}
+ .workspace:not([data-view="manufacturing"]) #bottom-info{margin-top:0}
+}
+.preview-controls{background:transparent;padding:10px 0}

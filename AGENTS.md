@@ -47,3 +47,13 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 ## Latest selectors and cap material
 - Control surface / Back sidebar selectors use a plain #E1E8ED selected/hover fill, with no red stripe, special icon color, outline or pressed movement.
 - Keep Wood dropdown terminology; include plastic alongside walnut/maple/cherry/oak. plastic caps use the current case color and plastic material (no wood texture). woodThickness remains the shared cap-thickness project key; UI label is Cap thickness. Persist and accept plastic through project import and MCP. Both cap STLs and cap G-code remain in every package regardless of appearance choice.
+
+## Editor refinement requirements
+- Control surface is shown top-down with front at screen bottom; stored Y still increases front-to-back. Back also displays bottom at screen bottom. Arrow-key nudging follows screen directions; inputs accept arbitrary finite decimals within physical limits, without spinners.
+- Geometry status is an overlay between the workspace title and export actions; it must never shift the drawing area.
+- Align horizontal = shared Y center; align vertical = shared X center, anchored to first selected object. Distribution spaces centers between extremes. Groups move as units. Center horizontal/vertical uses the whole selection bounds within the current face.
+- Drag empty canvas to marquee-select; Shift extends selection. Group/ungroup and repeat preserve independent group instances.
+- Rectangle cutouts support sharp, chamfer and fillet corners consistently in editor, solid, SVG/DXF, project and MCP. Assembly plate visibility is preview-only and hides plate screws too.
+- Bottom-screw gussets must blend into the circular boss footprint without a projecting square shelf, while retaining a 45-degree bed-facing ramp.
+- User approved implementing rectangular internal guides now. Each cutout may carry innerWidth/innerHeight, wall, height and signed offsetX/offsetY relative to its center. Extrude inward from inside face; include in shell STL and portable component/project/MCP data. Guide copies must be independent. Validate aperture inside cavity, protected margins and top/bottom clearance. Physical fit tolerance remains caller-supplied.
+- wrong.rodeo deployment is deferred again at user request; joshjacobson.net/casebuilder is the only current release target.

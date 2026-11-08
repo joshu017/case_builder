@@ -83,3 +83,28 @@ test('rear cutouts cannot cut through the new bottom-screw gussets',()=>{
  p.enclosure.screws=6;p.layouts.back[0].x=88;assert.ok(issues(p).some(s=>s.includes('gusset')));
  p.layouts.back[0].y=30;assert.deepEqual(issues(p),[]);
 });
+
+test('rounded and chamfered rectangle openings agree with exported contours and solid volume',()=>{
+ const p=newProject(),base=buildAssembly(wasm,p);
+ for(const corner of ['fillet','chamfer'] as const){const q={id:'usb',name:'USB-C',kind:'rect' as const,x:50.1234,y:21.2345,w:9.2,h:3.2,corner,radius:1.6};p.layouts.back=[q];const a=buildAssembly(wasm,p);valid(a.shell);
+ const area=q.w*q.h-(corner==='fillet'?(4-Math.PI)*q.radius**2:2*q.radius**2);close(base.shell.volume-a.shell.volume,area*p.enclosure.wall,.05);
+ assert.match(layoutSVG(p,'back'),/<polygon/);assert.match(layoutSVG(p,'back'),/scale\(1 -1\)/);assert.match(layoutDXF(p,'back'),/LWPOLYLINE/);
+ }
+});
+test('internal guides fuse to inside faces, preserve opening, offset and portable project',()=>{
+ for(const face of ['control','back'] as const){const p=newProject();const q={id:'guide',name:'Button',kind:'rect' as const,x:50,y:20,w:8,h:6,guide:{innerWidth:12,innerHeight:12,wall:1,height:2,offsetX:1.125,offsetY:.375}};p.layouts[face]=[q];assert.deepEqual(issues(p),[]);assert.deepEqual(parseProject(JSON.stringify(p)),p);
+ const guided=buildAssembly(wasm,p);valid(guided.shell);delete (q as any).guide;const plain=buildAssembly(wasm,p);close(guided.shell.volume-plain.shell.volume,(14*14-12*12)*2,.01);
+ const s=solid(guided.shell),plate=solid(guided.bottom),overlap=s.intersect(plate);close(overlap.volume(),0,.001);overlap.delete();s.delete();plate.delete();
+ }
+});
+test('guides reject offset apertures outside their cavity and heights reaching the plate',()=>{
+ const p=newProject();const q={id:'guide',name:'Button',kind:'rect' as const,x:50,y:30,w:8,h:6,guide:{innerWidth:12,innerHeight:12,wall:1,height:2,offsetX:10,offsetY:0}};p.layouts.control=[q];assert.ok(issues(p).some(s=>s.includes('inside its guide')));q.guide.offsetX=0;q.guide.height=80;assert.ok(issues(p).some(s=>s.includes('bottom plate')));
+});
+test('bottom gussets no longer project a square shelf beside the circular boss',()=>{
+ const p=newProject(),d=dimensions(p),a=buildAssembly(wasm,p),s=solid(a.shell);
+ for(const [x,y] of bottomCenters(p)){const sign=y<d.surfaceDepth/2?1:-1;const point=(dx:number,dy:number,z:number):[number,number,number]=>[x+dx,(y+dy)*d.c+z*d.s,d.rise-(y+dy)*d.s+z*d.c];
+ // Near the square corner, outside radius 4.3 but inside the former rectangular rib.
+ assert.equal(s.rayCast(point(4,sign*3.7,8),point(4,sign*3.7,12)).length,0);
+ }
+ s.delete();
+});

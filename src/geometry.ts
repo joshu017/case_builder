@@ -1,5 +1,6 @@
+import {rectangleOutline} from './layout';
 import type { ManifoldToplevel, Manifold, CrossSection, Vec2 } from 'manifold-3d';
-import { dimensions, screwCenters, bottomCenters, bottomGussetProfile, issues, type Project, type Shape } from './model';
+import { dimensions, screwCenters, bottomCenters, bottomGussetProfile, guideBounds, issues, type Project, type Shape } from './model';
 export type MeshData = { positions: Float32Array; indices: Uint32Array; volume: number };
 export type Assembly = { shell:MeshData; bottom:MeshData; left:MeshData; right:MeshData; capOutline:number[][]; screwCenters:number[][]; printBounds:number[] };
 export function profile(p:Project):Vec2[] {
@@ -46,7 +47,7 @@ export function printRailGusset(p:Project,center:Vec2,radius=4.3):Vec2[] {
  const d=dimensions(p),front=center[0]<d.depth/2,sign=front?1:-1;
  // h is across the profile; v increases away from the bed with control face down.
  const h=d.c*center[0]+d.s*center[1],v=d.s*center[0]-d.c*center[1];
- const tangentH=h+sign*radius,tangentV=v-radius*(Math.SQRT2-1);
+ const tangentH=h+sign*radius,tangentV=v-radius*(Math.SQRT2-1)-0.02;
  const wall=front?p.enclosure.wall-0.25:d.depth-p.enclosure.wall+0.25;
  const anchorV=(tangentV+sign*(wall/d.c-tangentH))/(1+sign*d.t);
  const at=(hh:number,vv:number):Vec2=>[d.c*hh+d.s*vv,d.s*hh-d.c*vv];
@@ -95,7 +96,11 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    const points=bottomGussetProfile(p,y);
    // A straight triangular rib only at each screw pad, 8.6 mm wide.
    shell=add(shell,boss);
-   shell=add(shell,move(yz(extrude(cross(points),8.6)),[x-4.3,0,0]));
+   const rib=move(yz(extrude(cross(points),8.6)),[x-4.3,0,0]);
+   // Round the inward edge in the boss's own plane; wallward half remains bonded.
+   const front=y<d.surfaceDepth/2,reach=d.surfaceDepth+20;
+   const footprint=add(move(cyl(400,4.3),[x,y,-100]),move(cube([8.6,reach,400]),[x-4.3,front?y-reach:y,-100]));
+   shell=add(shell,keep(rib.intersect(bottomFrame(footprint))));
   }
   shell=keep(shell.intersect(outer));
   const plateY=e.wall/d.c+0.25, plateDepth=d.surfaceDepth-2*plateY;
@@ -113,7 +118,15 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    shell=cut(shell,move(rotate(cyl(8.1,1.25),[0,90,0]),[-0.1,y,z]));
    shell=cut(shell,move(rotate(cyl(8.1,1.25),[0,90,0]),[d.width-8,y,z]));
   }
-  const shapeSolid=(q:Shape,length:number)=>q.kind==='circle'?move(cyl(length,q.w/2),[q.x+q.w/2,q.y+q.w/2,0]):move(cube([q.w,q.h,length]),[q.x,q.y,0]);
+  const shapeSolid=(q:Shape,length:number)=>q.kind==='circle'?move(cyl(length,q.w/2),[q.x+q.w/2,q.y+q.w/2,0]):extrude(cross(rectangleOutline(q)),length);
+  for(const face of ['control','back'] as const)for(const q of p.layouts[face])if(q.guide){
+   const g=q.guide,b=guideBounds(q);
+   const outside=move(cube([b.w,b.h,g.height+.2]),[b.x,b.y,0]);
+   const inside=move(cube([g.innerWidth,g.innerHeight,g.height+2]),[b.x+g.wall,b.y+g.wall,-1]);
+   const ring=cut(outside,inside);
+   const guide=face==='control'?move(rotate(move(ring,[0,0,-e.wall-g.height]),[deg,0,0]),[0,0,e.height-d.rise]):move(rotate(move(ring,[0,0,e.wall-.2]),[90,0,0]),[0,d.depth,0]);
+   shell=add(shell,guide);
+  }
   for(const q of p.layouts.control) {
     const tool=move(rotate(move(shapeSolid(q,e.wall+2),[0,0,-e.wall-1]),[deg,0,0]),[0,0,e.height-d.rise]);shell=cut(shell,tool);
   }

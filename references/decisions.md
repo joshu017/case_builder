@@ -74,3 +74,14 @@ User selected always including printable end caps alongside the existing CNC pro
 - Simplify face selectors to plain gray backgrounds without red stripe or pressed movement.
 - Local comparison SVG, full package and 25 mm print-oriented coupon generated for review. User approved and this revision was deployed to joshjacobson.net/casebuilder.
 - User also requested wrong.rodeo/casebuilder. This supersedes the earlier deferral; deployment is authorized but pending access to its Cloudflare zone (not visible to the current Wrangler OAuth login).
+
+## Editor tools, rounded bosses and internal guides
+
+- User requested a new local review with rounded bottom-screw gusset footprints, stationary geometry feedback, arbitrary decimal measurements, icon alignment/distribution/centering, marquee selection, group repetition, front-at-bottom control view, rounded/chamfered rectangular cutouts and a plate visibility toggle.
+- User explicitly approved implementing rectangular internal guide walls now. Guide dimensions are the inner cavity; offsets are relative to cutout center in face coordinates. Default guide height 2 mm and wall 1 mm. The initial cavity is cutout width/height + 2 mm; user supplies component dimensions and fit allowances.
+- Store guides with cutouts so library, copy/paste and grouped repeat carry them together. Keep the existing version-1 project format with optional fields for backward compatibility. Preview and STL share solids; SVG/DXF remain cutout-only manufacturing drawings.
+- Align horizontal means common Y center; vertical means common X center. First selected unit anchors alignment; groups are units. Distribution spaces centers between extreme units; centering moves selection bounds as a unit relative to the current face. Arbitrary reference rectangles remain future work.
+- Stored coordinates are unchanged; both editor and SVG now display Y upward from bottom/front. DXF uses stored Cartesian coordinates directly.
+- Added 0.02 mm bonded extension at rail ramp tangency to avoid an almost-collinear mesh sliver after the rounded boss Boolean intersection. Bed-facing slope remains 45 degrees.
+- Later user refinement: eliminate the nested center work-area card. Heading, toolbar/drawing area and bottom information form three direct rows on the center background. Status feedback stays overlaid and cannot reflow the drawing.
+- wrong.rodeo remains deferred by the user's latest instruction. This new editor/geometry revision is local only pending review.

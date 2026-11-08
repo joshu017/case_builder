@@ -1,5 +1,6 @@
 export type Face = 'control' | 'back';
-export type Shape = { id: string; kind: 'rect' | 'circle'; x: number; y: number; w: number; h: number; group?: string; name: string };
+export type Guide = {innerWidth:number;innerHeight:number;wall:number;height:number;offsetX:number;offsetY:number};
+export type Shape = { id: string; kind: 'rect' | 'circle'; x: number; y: number; w: number; h: number; group?: string; corner?: 'sharp' | 'chamfer' | 'fillet'; radius?: number; guide?:Guide; name: string };
 export type Component = { id: string; name: string; shapes: Shape[] };
 export type Project = {
   version: 1; name: string;
@@ -51,6 +52,7 @@ export function backGussetKeepouts(p:Project) {
  return bottomCenters(p).filter(([,y])=>y>d.surfaceDepth/2).map(([x,y])=>({x:x-4.8,w:9.6,h:Math.max(...bottomGussetProfile(p,y).map(q=>q[1]))+0.5}));
 }
 export function layoutMargin(p:Project) { const e=p.enclosure; return Math.max(13,Math.max(6,e.wall+3,e.radius+3)+6); }
+export function guideBounds(q:Shape){const g=q.guide!;return {x:q.x+q.w/2+g.offsetX-g.innerWidth/2-g.wall,y:q.y+(q.kind==='circle'?q.w:q.h)/2+g.offsetY-g.innerHeight/2-g.wall,w:g.innerWidth+2*g.wall,h:g.innerHeight+2*g.wall};}
 export function issues(p:Project):string[] {
  const e=p.enclosure,d=dimensions(p), margin=layoutMargin(p), out:string[]=[];
  if(d.frontHeight<22) out.push('Front height must be at least 22 mm for the screw rails. Increase rear height or reduce depth / total angle.');
@@ -61,6 +63,14 @@ export function issues(p:Project):string[] {
   const size=faceSize(p,f);
   for(const q of p.layouts[f]) {
     const h=q.kind==='circle'?q.w:q.h;
+    if(q.kind==='rect'&&q.corner&&q.corner!=='sharp'&&(!Number.isFinite(q.radius)||q.radius!<0||q.radius!>Math.min(q.w,q.h)/2))out.push(`Rectangle “${q.name}”: corner size must be between 0 and half the smaller dimension.`);
+    if(q.guide){const g=q.guide,b=guideBounds(q);
+      if(b.x<margin||b.y<margin||b.x+b.w>size.w-margin||b.y+b.h>size.h-margin)out.push(`Guide for “${q.name}” crosses the hardware margin.`);
+      if(q.x<b.x+g.wall-1e-6||q.y<b.y+g.wall-1e-6||q.x+q.w>b.x+b.w-g.wall+1e-6||q.y+h>b.y+b.h-g.wall+1e-6)out.push(`Guide for “${q.name}”: the cutout must fit inside its guide opening. Increase inner dimensions or reduce the offset.`);
+      const reach=e.wall+g.height;
+      if(f==='control'){if(d.c*b.y+d.s*reach<e.wall||d.c*(b.y+b.h)+d.s*reach>d.depth-e.wall)out.push(`Guide for “${q.name}” reaches a front or back wall. Reduce guide height or move it.`);const y=d.c*b.y+d.s*reach,z=e.height-d.rise+d.s*b.y-d.c*reach;if(z<d.rise-y*d.t+(e.plate+.25)/d.c)out.push(`Guide for “${q.name}” reaches the bottom plate. Reduce guide height.`);}
+      else {if(reach>d.depth-e.wall)out.push(`Guide for “${q.name}” reaches the front wall. Reduce guide height.`);for(const box of backGussetKeepouts(p))if(b.x<box.x+box.w&&b.x+b.w>box.x&&b.y<box.h)out.push(`Guide for “${q.name}” overlaps a bottom-screw gusset.`);const y=d.depth-reach;if(b.y<d.rise-y*d.t+(e.plate+.25)/d.c||b.y+b.h>e.height-d.rise+y*d.t-e.wall/d.c)out.push(`Guide for “${q.name}” reaches the top or bottom. Reduce guide height or move it.`);}
+    }
     // Rails occupy a protected perimeter; this also prevents cutouts severing screw bosses.
     if(q.x<margin-1e-6||q.y<margin-1e-6||q.x+q.w>size.w-margin+1e-6||q.y+h>size.h-margin+1e-6)out.push(`${f==='control'?'Control surface':'Back'}: “${q.name}” crosses the ${margin} mm hardware margin.`);
     if(f==='back')for(const box of backGussetKeepouts(p))if(q.x<box.x+box.w&&q.x+q.w>box.x&&q.y<box.h)out.push(`Back: “${q.name}” overlaps a bottom-screw gusset. Move it above ${box.h.toFixed(1)} mm or sideways clear of the screw pad.`);
@@ -85,7 +95,7 @@ export function parseProject(text:string):Project {
  const shapes=(arr:unknown):Shape[]=>{
  if(!Array.isArray(arr)||arr.length>400)throw Error('A layout can contain up to 400 cutouts.');
  const ids=new Set<string>();
- return arr.map(q=>{if(!q||!['rect','circle'].includes(q.kind)||typeof q.id!=='string'||ids.has(q.id)||typeof q.name!=='string'||q.name.length>100||(q.group!==undefined&&typeof q.group!=='string'))throw Error('Invalid cutout.');ids.add(q.id);return {id:q.id,kind:q.kind,x:num(q,'x',0,1000),y:num(q,'y',0,1000),w:num(q,'w',0.5,500),h:num(q,'h',0.5,500),name:q.name,...(q.group?{group:q.group}:{})};});};
+ return arr.map(q=>{if(!q||!['rect','circle'].includes(q.kind)||typeof q.id!=='string'||ids.has(q.id)||typeof q.name!=='string'||q.name.length>100||(q.group!==undefined&&typeof q.group!=='string'))throw Error('Invalid cutout.');if(q.corner!==undefined&&!['sharp','chamfer','fillet'].includes(q.corner))throw Error('Invalid cutout corner.');if(q.radius!==undefined)num(q,'radius',0,250);ids.add(q.id);return {id:q.id,kind:q.kind,x:num(q,'x',0,1000),y:num(q,'y',0,1000),w:num(q,'w',0.5,500),h:num(q,'h',0.5,500),name:q.name,...(q.corner!==undefined?{corner:q.corner}:{}),...(q.radius!==undefined?{radius:q.radius}:{}),...(q.guide?{guide:{innerWidth:num(q.guide,'innerWidth',.5,500),innerHeight:num(q.guide,'innerHeight',.5,500),wall:num(q.guide,'wall',.4,10),height:num(q.guide,'height',.2,100),offsetX:num(q.guide,'offsetX',-500,500),offsetY:num(q.guide,'offsetY',-500,500)}}:{}),...(q.group?{group:q.group}:{})};});};
  base.layouts={control:shapes(raw.layouts?.control),back:shapes(raw.layouts?.back)};
  if(!Array.isArray(raw.components)||raw.components.length>100)throw Error('Invalid component library.');
  base.components=raw.components.map((c:Component)=>{if(typeof c.name!=='string'||c.name.length>100||typeof c.id!=='string')throw Error('Invalid component.');return {id:c.id,name:c.name,shapes:shapes(c.shapes)};});base.name=raw.name;return base;

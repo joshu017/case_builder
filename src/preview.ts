@@ -14,18 +14,18 @@ export class Preview {
  const draw=()=>{this.frame=requestAnimationFrame(draw);this.controls.update();this.renderer.render(this.scene,this.camera);};draw();
  }
  clear(){for(const o of [...this.group.children]){this.group.remove(o);if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];for(const m of mats){if('map' in m)(m.map as THREE.Texture|null)?.dispose();m.dispose();}}}}
- set(a:Assembly,p:Project,exploded=false){
+ set(a:Assembly,p:Project,exploded=false,showPlate=true){
  this.clear();const d=dimensions(p),woodColors={walnut:'#75513b',maple:'#d5b77e',cherry:'#ad6d4d',oak:'#b39361'};
  const woodTexture=()=>{const c=document.createElement('canvas');c.width=256;c.height=256;const ctx=c.getContext('2d')!;ctx.fillStyle=woodColors[p.enclosure.wood==='plastic'?'walnut':p.enclosure.wood];ctx.fillRect(0,0,256,256);for(let i=0;i<90;i++){ctx.strokeStyle=`rgba(45,23,10,${0.03+(i%5)*0.015})`;ctx.lineWidth=0.5+(i%3)*0.5;ctx.beginPath();for(let x=0;x<=256;x+=4){const y=i*3+Math.sin(x/60+i)*2; x?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;};
  const add=(m:MeshData,color:string,wood=false,shift=[0,0,0])=>{
  let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(m.positions,3));g.setIndex(new THREE.BufferAttribute(m.indices,1));g=g.toNonIndexed();g.computeVertexNormals();
  if(wood){const pos=g.getAttribute('position'),uv=new Float32Array(pos.count*2);for(let i=0;i<pos.count;i++){uv[i*2]=pos.getY(i)/d.depth;uv[i*2+1]=pos.getZ(i)/p.enclosure.height;}g.setAttribute('uv',new THREE.BufferAttribute(uv,2));}
  const mat=new THREE.MeshStandardMaterial({color:wood?'#ffffff':color,roughness:wood?0.78:0.55,metalness:0.03,map:wood?woodTexture():null});const mesh=new THREE.Mesh(g,mat);mesh.position.set(shift[0],shift[1],shift[2]);this.group.add(mesh);};
- add(a.shell,p.enclosure.color);add(a.bottom,p.enclosure.color,false,[0,0,exploded?-25:0]);add(a.left,p.enclosure.color,p.enclosure.wood!=='plastic',[exploded?-25:0,0,0]);add(a.right,p.enclosure.color,p.enclosure.wood!=='plastic',[exploded?25:0,0,0]);
+ add(a.shell,p.enclosure.color);if(showPlate)add(a.bottom,p.enclosure.color,false,[0,0,exploded?-25:0]);add(a.left,p.enclosure.color,p.enclosure.wood!=='plastic',[exploded?-25:0,0,0]);add(a.right,p.enclosure.color,p.enclosure.wood!=='plastic',[exploded?25:0,0,0]);
  // Hardware heads are visual representations; actual clearances live in the solid model.
  const head=(pos:THREE.Vector3,axis:THREE.Vector3,r=2.75,h=2.6)=>{const g=new THREE.CylinderGeometry(r,r,h,24),mat=new THREE.MeshStandardMaterial({color:0x33383a,metalness:0.65,roughness:0.35}),m=new THREE.Mesh(g,mat);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);m.position.copy(pos);this.group.add(m);};
  for(const [y,z] of screwCenters(p)){head(new THREE.Vector3(-p.enclosure.woodThickness+1.5-(exploded?25:0),y,z),new THREE.Vector3(1,0,0));head(new THREE.Vector3(d.width+p.enclosure.woodThickness-1.5+(exploded?25:0),y,z),new THREE.Vector3(1,0,0));}
- for(const [x,y] of bottomCenters(p)) {
+ if(showPlate)for(const [x,y] of bottomCenters(p)) {
   const axis=new THREE.Vector3(0,d.s,d.c),outside=new THREE.Vector3(x,y*d.c,d.rise-y*d.s-(exploded?25:0));
   const screwPart=(rTop:number,rBottom:number,height:number,offset:number)=>{
    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBottom,height,32),new THREE.MeshStandardMaterial({color:0x33383a,metalness:0.65,roughness:0.35}));

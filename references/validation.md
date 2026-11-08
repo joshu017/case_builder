@@ -17,3 +17,12 @@
 - Touch/mobile browser flows and non-WebGL fallback were not exercised.
 - Per-cutout chamfering and live linked pattern parameters are not implemented; generated repetitions are editable independent copies.
 - GitHub push and Cloudflare deployment are pending review/account selection per Workers conventions.
+
+## Local editor and internal-guide refinement
+
+- Rounded boss-footprint clipping removes the former square gusset shelf. Tests verify connected solids, plate clearance, hole alignment, and internal overhang normals across 0/10/30-degree total angles and 2/6 mm walls.
+- Rounded/chamfered rectangle cutout volume is checked against expected area and exported shared contours. Decimal project fields round-trip without quantization.
+- Guide tests cover connected inside-wall rings on control/back faces, expected added volume, plate clearance, offset containment and excessive height rejection. MCP workflow includes a rounded guided component and full export round-trip.
+- Browser checks: marquee selected four shapes; group/ungroup and a 30.125 mm repeated row worked; align/distribute/center actions worked; native typed decimals persisted to an exported ZIP; Arrow Up increased stored Y by exactly 1 mm. Geometry status did not change drawing bounds. Library and all repeated guide definitions were present in browser-downloaded project JSON.
+- Assembly visually inspected from underneath with plate hidden: guide rings and rounded screw bosses visible. Plate button changes to Show plate. Current preview checked at actual browser viewport 1195×1258; requested viewport override did not apply, so no new 1366×768 claim is made.
+- User's original localhost project was backed up and restored. Additional example retained on localhost hostname, separate from 127.0.0.1 origin. Physical printing is not tested.
