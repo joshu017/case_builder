@@ -198,3 +198,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 #pattern-dialog[hidden],#pattern-rect[hidden],#pattern-circle[hidden]{display:none}
 #pattern-dialog h3{margin:0 0 8px}#pattern-dialog .field-grid{margin-top:8px}#pattern-dialog .button-row{justify-content:flex-end;margin-top:10px}
 #pattern-dialog{display:block;max-height:calc(100dvh - 190px);overflow:auto}
+/* Align desktop tabs with the workspace, without a redundant navigation label. */
+@media(min-width:851px){nav{padding-left:220px}}
+@media(min-width:851px) and (max-width:1150px){nav{padding-left:185px}}
+@media(min-width:1600px){nav{padding-left:240px}}

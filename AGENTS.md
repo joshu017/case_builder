@@ -77,3 +77,4 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - Browser verified rectangular Apply/Undo, circular Apply/Undo, Cancel, and rendered dialog. Build and 39 tests pass. Local only pending review.
 
 - Remove redundant Control surface/Back selectors and Project contents label from left sidebar; main tabs alone select the face. Remove Design studio nav label. Left sidebar starts with Cutouts (or Parts), followed by component library; attributes remain right, tools above workspace.
+- Keep desktop tabs aligned to the left boundary of the center workspace (after the left sidebar), even without the Design studio label. Small screens retain full-width tabs.
