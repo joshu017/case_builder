@@ -90,6 +90,7 @@ function select(id:string,extend=false){const q=shapes().find(x=>x.id===id);if(!
 function duplicate(source:Shape[],dx=5,dy=5){const groups=new Map<string,string>();return source.map(q=>({...clone(q),id:uid(),x:q.x+dx,y:q.y+dy,...(q.group?{group:groups.get(q.group)??(groups.set(q.group,uid()),groups.get(q.group))}:{})}));}
 function insertCopies(copy:Shape[],component?:Component){if(component&&!project.components.some(c=>c.id===component.id)&&project.components.length>=100)return toast('Maximum 100 components per project.');if(shapes().length+copy.length>400)return toast('Maximum 400 cutouts per face.');change(()=>{if(component){const i=project.components.findIndex(c=>c.id===component.id);if(i<0)project.components.push(clone(component));else project.components[i]=clone(component);}shapes().push(...copy);selected=new Set(copy.map(q=>q.id));});}
 let pickingPatternCenter=false,patternCenterClick=false;
+let patternCenterDrag:null|{pointerId:number;dx:number;dy:number;x:number;y:number}=null;
 function readPatternOptions(){
   const val=(id:string)=>{const el=$<HTMLInputElement>('#'+id);if(!el.value.trim()||!el.checkValidity())throw Error('Enter valid pattern values.');return Number(el.value);};
   const kind=$('#pattern-dialog').dataset.kind;
@@ -98,16 +99,21 @@ function readPatternOptions(){
 function renderPatternPreview(){
  $('#pattern-preview')?.remove();const dialog=$('#pattern-dialog');if(dialog.hidden)return;
  const h=faceSize(project,face).h;let markup='';
- if(dialog.dataset.kind==='circular'){const x=Number($<HTMLInputElement>('#pattern-x').value),y=Number($<HTMLInputElement>('#pattern-y').value);if(Number.isFinite(x+y))markup+=`<path class="pattern-center" d="M ${x-2} ${h-y} h 4 M ${x} ${h-y-2} v 4"/>`;}
+ if(dialog.dataset.kind==='circular'){const x=Number($<HTMLInputElement>('#pattern-x').value),y=Number($<HTMLInputElement>('#pattern-y').value);if(Number.isFinite(x+y))markup+=`<g data-pattern-center pointer-events="all"><circle cx="${x}" cy="${h-y}" r="3" fill="transparent" stroke="none"/><path class="pattern-center" d="M ${x-2} ${h-y} h 4 M ${x} ${h-y-2} v 4"/><title>Drag pattern center</title></g>`;}
  try{const copies=patternCopies(picked(),readPatternOptions(),400-shapes().length);for(const q of copies){markup+=q.kind==='circle'?`<circle cx="${q.x+q.w/2}" cy="${h-q.y-q.w/2}" r="${q.w/2}"/>`:`<polygon points="${rectangleOutline(q).map(([x,y])=>`${x},${h-y}`).join(' ')}"/>`;if(q.guide){const b=guideBounds(q),g=q.guide;markup+=`<rect x="${b.x}" y="${h-b.y-b.h}" width="${b.w}" height="${b.h}"/><rect x="${b.x+g.wall}" y="${h-b.y-b.h+g.wall}" width="${g.innerWidth}" height="${g.innerHeight}"/>`;}}
  $('#pattern-error').hidden=true;$<HTMLButtonElement>('[data-action="pattern-apply"]').disabled=false;
  }catch(error){$('#pattern-error').textContent=error instanceof Error?error.message:String(error);$('#pattern-error').hidden=false;$<HTMLButtonElement>('[data-action="pattern-apply"]').disabled=true;}
  const group=document.createElementNS('http://www.w3.org/2000/svg','g');group.id='pattern-preview';group.setAttribute('pointer-events','none');group.innerHTML=markup;$('#canvas').append(group);
 }
 app.addEventListener('input',event=>{if((event.target as HTMLElement).closest('#pattern-dialog'))renderPatternPreview();});
+function endPatternCenterDrag(restore=false){
+ if(!patternCenterDrag)return;const state=patternCenterDrag;patternCenterDrag=null;
+ const canvas=$<SVGSVGElement>('#canvas');if(canvas.hasPointerCapture(state.pointerId))canvas.releasePointerCapture(state.pointerId);canvas.classList.remove('drag-pattern-center');
+ if(restore){$<HTMLInputElement>('#pattern-x').value=String(state.x);$<HTMLInputElement>('#pattern-y').value=String(state.y);renderPatternPreview();}
+}
 function positionPattern(){const dialog=$<HTMLElement>('#pattern-dialog'),bar=$('.editor-toolbar').getBoundingClientRect(),button=$('[data-action="pattern"]').getBoundingClientRect();dialog.style.left=`${Math.max(0,Math.min(button.left+button.width/2-bar.left-dialog.offsetWidth/2,bar.width-dialog.offsetWidth))}px`;dialog.style.top=`${button.bottom-bar.top+6}px`;}
 window.addEventListener('resize',()=>{if(!$('#pattern-dialog').hidden)positionPattern();});
-function closePattern(focus=true){pickingPatternCenter=false;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';const dialog=$('#pattern-dialog');if(dialog.hidden)return;dialog.hidden=true;$('#pattern-preview')?.remove();$('[data-action="pattern"]').setAttribute('aria-expanded','false');if(focus)$<HTMLButtonElement>('[data-action="pattern"]').focus({preventScroll:true});}
+function closePattern(focus=true){endPatternCenterDrag();pickingPatternCenter=false;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';const dialog=$('#pattern-dialog');if(dialog.hidden)return;dialog.hidden=true;$('#pattern-preview')?.remove();$('[data-action="pattern"]').setAttribute('aria-expanded','false');if(focus)$<HTMLButtonElement>('[data-action="pattern"]').focus({preventScroll:true});}
 function openPattern(){
  if(!picked().length)return;const size=faceSize(project,face),dialog=$('#pattern-dialog');
  const input=(label:string,id:string,value:number,min:number,max:number)=>`<label class="field">${label}<input id="${id}" type="number" step="any" value="${value}" min="${min}" max="${max}"></label>`;
@@ -149,7 +155,7 @@ async function action(name:string){
  }catch(err){toast(err instanceof Error?err.message:String(err));}
 }
 app.addEventListener('click',event=>{
- if(patternCenterClick){patternCenterClick=false;return;}
+ if(patternCenterClick){patternCenterClick=false;if((event.target as Element).closest('#canvas'))return;}
  if(pickingPatternCenter)return;
  if(!$('#pattern-dialog').hidden&&!(event.target as HTMLElement).closest('#pattern-dialog,[data-action="pattern"]'))closePattern(false);
  const t=(event.target as HTMLElement).closest<HTMLElement>('button');if(!t)return;
@@ -184,6 +190,8 @@ let drag:null|{x:number;y:number;items:Shape[];moved:boolean}=null;
 let marquee:null|{x:number;y:number;initial:Set<string>;moved:boolean;clientX:number;clientY:number}=null;
 $('#canvas').addEventListener('pointerdown',event=>{
  const ev=event as PointerEvent;if(ev.button!==0)return;
+ if(!pickingPatternCenter&&(ev.target as Element).closest('[data-pattern-center]')){const p=svgPoint(ev),x=Number($<HTMLInputElement>('#pattern-x').value),y=Number($<HTMLInputElement>('#pattern-y').value);patternCenterDrag={pointerId:ev.pointerId,dx:x-p.x,dy:y-p.y,x,y};patternCenterClick=true;$<SVGSVGElement>('#canvas').setPointerCapture(ev.pointerId);$('#canvas').classList.add('drag-pattern-center');ev.preventDefault();return;}
+
  if(pickingPatternCenter){const p=svgPoint(ev),size=faceSize(project,face);if(p.x<0||p.y<0||p.x>size.w||p.y>size.h)return;for(const axis of ['x','y'] as const)$<HTMLInputElement>('#pattern-'+axis).value=String(Number(p[axis].toFixed(4)));pickingPatternCenter=false;patternCenterClick=true;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';positionPattern();renderPatternPreview();$<HTMLInputElement>('#pattern-x').focus({preventScroll:true});ev.preventDefault();return;}const t=(ev.target as Element).closest<SVGElement>('[data-id]'),p=svgPoint(ev);
  (document.activeElement as HTMLElement)?.blur();
  if(!t){marquee={x:p.x,y:p.y,initial:ev.shiftKey?new Set(selected):new Set(),moved:false,clientX:ev.clientX,clientY:ev.clientY};if(!ev.shiftKey)selected.clear();renderInspector();renderCanvas();renderToolbar();ev.preventDefault();return;}
@@ -191,6 +199,7 @@ $('#canvas').addEventListener('pointerdown',event=>{
  drag={x:p.x,y:p.y,items:clone(picked()),moved:false};renderInspector();renderCanvas();renderToolbar();ev.preventDefault();
 });
 window.addEventListener('pointermove',ev=>{
+ if(patternCenterDrag){if(ev.pointerId!==patternCenterDrag.pointerId)return;const p=svgPoint(ev),size=faceSize(project,face);for(const axis of ['x','y'] as const){const value=Math.max(0,Math.min(axis==='x'?size.w:size.h,p[axis]+(axis==='x'?patternCenterDrag.dx:patternCenterDrag.dy)));$<HTMLInputElement>('#pattern-'+axis).value=String(Number(value.toFixed(4)));}renderPatternPreview();ev.preventDefault();return;}
  if(marquee){const p=svgPoint(ev),box={x:Math.min(p.x,marquee.x),y:Math.min(p.y,marquee.y),w:Math.abs(p.x-marquee.x),h:Math.abs(p.y-marquee.y)};marquee.moved ||= Math.hypot(ev.clientX-marquee.clientX,ev.clientY-marquee.clientY)>3;if(!marquee.moved)return;selected=new Set([...marquee.initial,...marqueeSelection(shapes(),box)]);renderCanvas();const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [key,value] of Object.entries({x:box.x,y:faceSize(project,face).h-box.y-box.h,width:box.w,height:box.h}))rect.setAttribute(key,String(value));rect.setAttribute('class','marquee');$('#canvas').append(rect);renderToolbar();return;}
  if(!drag||!drag.items.length)return;const p=svgPoint(ev);let dx=Math.round(p.x-drag.x),dy=Math.round(p.y-drag.y);if(!dx&&!dy&&!drag.moved)return;
  dx=Math.max(dx,-Math.min(...drag.items.map(q=>q.x)));dy=Math.max(dy,-Math.min(...drag.items.map(q=>q.y)));
@@ -198,9 +207,10 @@ window.addEventListener('pointermove',ev=>{
  for(const src of drag.items){const q=shapes().find(q=>q.id===src.id);if(q){q.x=src.x+dx;q.y=src.y+dy;}}
  renderCanvas();
 });
-window.addEventListener('pointerup',()=>{if(marquee){marquee=null;render();}if(drag?.moved){persist();render();queueGeometry();}drag=null;});
-window.addEventListener('pointercancel',()=>{if(drag?.moved){persist();queueGeometry();}drag=null;marquee=null;render();});
+window.addEventListener('pointerup',()=>{if(patternCenterDrag){endPatternCenterDrag();return;}if(marquee){marquee=null;render();}if(drag?.moved){persist();render();queueGeometry();}drag=null;});
+window.addEventListener('pointercancel',()=>{if(patternCenterDrag){endPatternCenterDrag(true);patternCenterClick=false;return;}if(drag?.moved){persist();queueGeometry();}drag=null;marquee=null;render();});
 window.addEventListener('keydown',ev=>{
+ if(patternCenterDrag){if(ev.key==='Escape'){ev.preventDefault();endPatternCenterDrag(true);}return;}
  if(pickingPatternCenter){if(ev.key==='Escape'){ev.preventDefault();pickingPatternCenter=false;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';$<HTMLButtonElement>('[data-action="pattern-pick-center"]').focus({preventScroll:true});}return;}
  if(!$('#pattern-dialog').hidden){if(ev.key==='Escape'){ev.preventDefault();closePattern();}else if(ev.key==='Tab'){const controls=[...$('#pattern-dialog').querySelectorAll<HTMLElement>('input,select,button')].filter(e=>e.getClientRects().length);const i=controls.indexOf(document.activeElement as HTMLElement);if(ev.shiftKey&&i===0){ev.preventDefault();controls.at(-1)?.focus();}else if(!ev.shiftKey&&i===controls.length-1){ev.preventDefault();controls[0]?.focus();}}return;}
  if((ev.target as Element).closest('input,textarea,select,button')||!(tab==='control'||tab==='back'))return;
