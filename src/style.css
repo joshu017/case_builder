@@ -210,3 +210,14 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .editor-toolbar .editor-actions{justify-self:end;margin-left:0}
 .editor-toolbar .shape-tools .icon-button{font-size:20px;line-height:1}
 @media(max-width:1150px){.editor-toolbar{grid-template-columns:auto minmax(0,1fr)}.editor-toolbar .editor-actions{grid-column:1/-1;justify-self:end}}
+#pattern-dialog{width:min(270px,100%);right:auto;padding:10px}
+#pattern-dialog .pattern-heading{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+#pattern-dialog .pattern-heading h3{margin:0 auto 0 0}
+#pattern-dialog [aria-pressed="true"]{background:#d8e1e7;border-color:#607482}
+#pattern-dialog .hint{margin:6px 0;font-size:10px}
+#pattern-dialog .pick-center-button{margin:2px 0 0 auto;display:grid}
+#canvas.pick-center,#canvas.pick-center *{cursor:crosshair!important}
+#pattern-dialog .pick-center-button{margin:0}
+#pattern-dialog .pick-center-button[hidden]{display:none}
+#pattern-preview{fill:#c4cfd720;stroke:#85949f;stroke-width:.45;stroke-dasharray:1.4 1}
+#pattern-preview .pattern-center{fill:none;stroke:#4a5661;stroke-width:.6;stroke-dasharray:none}

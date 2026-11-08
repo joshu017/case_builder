@@ -74,6 +74,7 @@ function renderCanvas(){
  const svg=$<SVGSVGElement>('#canvas'),size=faceSize(project,face),m=16,margin=layoutMargin(project);
  svg.setAttribute('viewBox',`${-m} ${-m} ${size.w+2*m} ${size.h+2*m}`);
  svg.innerHTML=`<defs><pattern id="grid" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M 5 0 L 0 0 0 5" fill="none" stroke="#ccd6de" stroke-width="0.15"/></pattern></defs><rect x="0" y="0" width="${size.w}" height="${size.h}" rx="1.5" fill="#eef3f6" stroke="#607482" stroke-width="0.35"/><rect width="${size.w}" height="${size.h}" fill="url(#grid)"/><path d="M 0 ${margin} H ${size.w} M 0 ${size.h-margin} H ${size.w}" fill="none" stroke="#8c9eac" stroke-dasharray="1.2 1.5" stroke-width="0.3"/><text class="face-label" x="${size.w/2}" y="-3" text-anchor="middle">${face==='control'?'BACK EDGE':'TOP EDGE'}</text><text class="face-label" x="${size.w/2}" y="${size.h+6}" text-anchor="middle">${face==='control'?'FRONT EDGE':'BOTTOM EDGE'}</text>${shapes().filter(q=>q.guide).map(q=>{const b=guideBounds(q),g=q.guide!;return `<g class="guide-outline" pointer-events="none"><rect x="${b.x}" y="${size.h-b.y-b.h}" width="${b.w}" height="${b.h}"/><rect x="${b.x+g.wall}" y="${size.h-b.y-b.h+g.wall}" width="${g.innerWidth}" height="${g.innerHeight}"/></g>`;}).join('')}${shapes().map(q=>{const attrs=`data-id="${esc(q.id)}" class="cutout ${selected.has(q.id)?'selected':''}" fill="${selected.has(q.id)?'#f8c6b9':'#c4cfd7'}" stroke="${selected.has(q.id)?'#bd341a':'#4a5661'}" stroke-width="${selected.has(q.id)?0.8:0.4}"`;return q.kind==='circle'?`<circle ${attrs} cx="${q.x+q.w/2}" cy="${size.h-q.y-q.w/2}" r="${q.w/2}"><title>${esc(q.name)} · Ø${q.w} mm</title></circle>`:`<polygon ${attrs} points="${rectangleOutline(q).map(([x,y])=>`${x},${size.h-y}`).join(' ')}"><title>${esc(q.name)} · ${q.w} × ${q.h} mm</title></polygon>`;}).join('')}${!shapes().length?`<text class="empty-subtitle" x="${size.w/2}" y="${size.h/2+5}" text-anchor="middle">Add a shape from above</text>`:''}`;
+ renderPatternPreview();
  $('#canvas-size').textContent=`${size.w.toFixed(1)} × ${size.h.toFixed(1)} mm · ${shapes().length} cutouts`;
 }
 function renderManufacturing(){
@@ -88,12 +89,30 @@ function addShape(kind:'rect'|'circle'){
 function select(id:string,extend=false){const q=shapes().find(x=>x.id===id);if(!q)return;const ids=q.group?shapes().filter(x=>x.group===q.group).map(x=>x.id):[id];if(!extend)selected.clear();const remove=extend&&selected.has(id);ids.forEach(x=>remove?selected.delete(x):selected.add(x));}
 function duplicate(source:Shape[],dx=5,dy=5){const groups=new Map<string,string>();return source.map(q=>({...clone(q),id:uid(),x:q.x+dx,y:q.y+dy,...(q.group?{group:groups.get(q.group)??(groups.set(q.group,uid()),groups.get(q.group))}:{})}));}
 function insertCopies(copy:Shape[],component?:Component){if(component&&!project.components.some(c=>c.id===component.id)&&project.components.length>=100)return toast('Maximum 100 components per project.');if(shapes().length+copy.length>400)return toast('Maximum 400 cutouts per face.');change(()=>{if(component){const i=project.components.findIndex(c=>c.id===component.id);if(i<0)project.components.push(clone(component));else project.components[i]=clone(component);}shapes().push(...copy);selected=new Set(copy.map(q=>q.id));});}
-function closePattern(focus=true){const dialog=$('#pattern-dialog');if(dialog.hidden)return;dialog.hidden=true;$('[data-action="pattern"]').setAttribute('aria-expanded','false');if(focus)$<HTMLButtonElement>('[data-action="pattern"]').focus({preventScroll:true});}
+let pickingPatternCenter=false,patternCenterClick=false;
+function readPatternOptions(){
+  const val=(id:string)=>{const el=$<HTMLInputElement>('#'+id);if(!el.value.trim()||!el.checkValidity())throw Error('Enter valid pattern values.');return Number(el.value);};
+  const kind=$('#pattern-dialog').dataset.kind;
+  return kind==='rectangular'?{kind:'rectangular' as const,columns:val('columns'),rows:val('rows'),dx:val('pitch-x'),dy:val('pitch-y')}:{kind:'circular' as const,count:val('pattern-count'),centerX:val('pattern-x'),centerY:val('pattern-y'),angle:val('pattern-angle')};
+}
+function renderPatternPreview(){
+ $('#pattern-preview')?.remove();const dialog=$('#pattern-dialog');if(dialog.hidden)return;
+ const h=faceSize(project,face).h;let markup='';
+ if(dialog.dataset.kind==='circular'){const x=Number($<HTMLInputElement>('#pattern-x').value),y=Number($<HTMLInputElement>('#pattern-y').value);if(Number.isFinite(x+y))markup+=`<path class="pattern-center" d="M ${x-2} ${h-y} h 4 M ${x} ${h-y-2} v 4"/>`;}
+ try{const copies=patternCopies(picked(),readPatternOptions(),400-shapes().length);for(const q of copies){markup+=q.kind==='circle'?`<circle cx="${q.x+q.w/2}" cy="${h-q.y-q.w/2}" r="${q.w/2}"/>`:`<polygon points="${rectangleOutline(q).map(([x,y])=>`${x},${h-y}`).join(' ')}"/>`;if(q.guide){const b=guideBounds(q),g=q.guide;markup+=`<rect x="${b.x}" y="${h-b.y-b.h}" width="${b.w}" height="${b.h}"/><rect x="${b.x+g.wall}" y="${h-b.y-b.h+g.wall}" width="${g.innerWidth}" height="${g.innerHeight}"/>`;}}
+ $('#pattern-error').hidden=true;$<HTMLButtonElement>('[data-action="pattern-apply"]').disabled=false;
+ }catch(error){$('#pattern-error').textContent=error instanceof Error?error.message:String(error);$('#pattern-error').hidden=false;$<HTMLButtonElement>('[data-action="pattern-apply"]').disabled=true;}
+ const group=document.createElementNS('http://www.w3.org/2000/svg','g');group.id='pattern-preview';group.setAttribute('pointer-events','none');group.innerHTML=markup;$('#canvas').append(group);
+}
+app.addEventListener('input',event=>{if((event.target as HTMLElement).closest('#pattern-dialog'))renderPatternPreview();});
+function positionPattern(){const dialog=$<HTMLElement>('#pattern-dialog'),bar=$('.editor-toolbar').getBoundingClientRect(),button=$('[data-action="pattern"]').getBoundingClientRect();dialog.style.left=`${Math.max(0,Math.min(button.left+button.width/2-bar.left-dialog.offsetWidth/2,bar.width-dialog.offsetWidth))}px`;dialog.style.top=`${button.bottom-bar.top+6}px`;}
+window.addEventListener('resize',()=>{if(!$('#pattern-dialog').hidden)positionPattern();});
+function closePattern(focus=true){pickingPatternCenter=false;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';const dialog=$('#pattern-dialog');if(dialog.hidden)return;dialog.hidden=true;$('#pattern-preview')?.remove();$('[data-action="pattern"]').setAttribute('aria-expanded','false');if(focus)$<HTMLButtonElement>('[data-action="pattern"]').focus({preventScroll:true});}
 function openPattern(){
  if(!picked().length)return;const size=faceSize(project,face),dialog=$('#pattern-dialog');
  const input=(label:string,id:string,value:number,min:number,max:number)=>`<label class="field">${label}<input id="${id}" type="number" step="any" value="${value}" min="${min}" max="${max}"></label>`;
- dialog.innerHTML=`<h3>Pattern</h3><label class="wide-field">Pattern type<select id="pattern-kind"><option value="rectangular">Rectangular</option><option value="circular">Circular</option></select></label><div id="pattern-rect" class="field-grid">${input('Columns','columns',4,1,20)}${input('Rows','rows',1,1,20)}${input('Column pitch (mm)','pitch-x',25,.001,500)}${input('Row pitch (mm)','pitch-y',25,.001,500)}</div><div id="pattern-circle" hidden><div class="field-grid">${input('Instances','pattern-count',6,2,400)}${input('Sweep angle (°)','pattern-angle',360,-360,360)}${input('Center X (mm)','pattern-x',size.w/2,0,1000)}${input('Center Y (mm)','pattern-y',size.h/2,0,1000)}</div><p class="hint">Selection sets radius. Copies stay upright. Positive angles go counterclockwise; partial arcs include both ends.</p></div><p class="hint">Counts include the original selection. Apply adds copies in one undo step.</p><div class="button-row"><button data-action="pattern-cancel">Cancel</button><button data-action="pattern-apply" class="primary">Apply</button></div>`;
- dialog.hidden=false;$('[data-action="pattern"]').setAttribute('aria-expanded','true');$<HTMLSelectElement>('#pattern-kind').focus();
+ dialog.innerHTML=`<div class="pattern-heading"><h3>Pattern</h3><button class="icon-button" data-action="pattern-rectangular" title="Rectangular pattern" aria-label="Rectangular pattern" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button class="icon-button" data-action="pattern-circular" title="Circular pattern" aria-label="Circular pattern" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button id="pattern-pick" class="icon-button pick-center-button" hidden data-action="pattern-pick-center" title="Pick center on canvas" aria-label="Pick center on canvas"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 3v7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></div><div id="pattern-rect" class="field-grid">${input('Columns','columns',4,1,20)}${input('Rows','rows',1,1,20)}${input('Column pitch (mm)','pitch-x',25,.001,500)}${input('Row pitch (mm)','pitch-y',25,.001,500)}</div><div id="pattern-circle" hidden><div class="field-grid">${input('Instances','pattern-count',6,2,400)}${input('Sweep angle (°)','pattern-angle',360,-360,360)}${input('Center X (mm)','pattern-x',size.w/2,0,1000)}${input('Center Y (mm)','pattern-y',size.h/2,0,1000)}</div><p class="hint">Copies stay upright. Positive sweep: counterclockwise.</p></div><p class="hint">Counts include the original.</p><p id="pattern-error" class="hint error" role="status" hidden></p><div class="button-row"><button data-action="pattern-cancel">Cancel</button><button data-action="pattern-apply" class="primary">Apply</button></div>`;
+ dialog.dataset.kind='rectangular';dialog.hidden=false;positionPattern();renderPatternPreview();$('[data-action="pattern"]').setAttribute('aria-expanded','true');$<HTMLButtonElement>('[data-action="pattern-rectangular"]').focus({preventScroll:true});
 }
 async function action(name:string){
  try{
@@ -114,11 +133,12 @@ async function action(name:string){
  if(name==='ungroup'&&selected.size)change(()=>{picked().forEach(q=>delete q.group);});
  if(name==='save-component'){const name=$<HTMLInputElement>('#component-name').value.trim();if(!name)return toast('Enter a name for the component.');if(project.components.length>=100)return toast('Maximum 100 components per project.');const ps=picked(),x=Math.min(...ps.map(q=>q.x)),y=Math.min(...ps.map(q=>q.y));change(()=>project.components.push({id:uid(),name,shapes:ps.map(q=>({...clone(q),x:q.x-x,y:q.y-y}))}));toast('Component saved with this project.');}
  if(name==='pattern')openPattern();
+ if(name==='pattern-rectangular'||name==='pattern-circular'){const circular=name==='pattern-circular';$('#pattern-dialog').dataset.kind=circular?'circular':'rectangular';$('#pattern-rect').hidden=circular;$('#pattern-circle').hidden=!circular;$('#pattern-pick').hidden=!circular;for(const kind of ['rectangular','circular'])$(`[data-action="pattern-${kind}"]`).setAttribute('aria-pressed',String($('#pattern-dialog').dataset.kind===kind));positionPattern();renderPatternPreview();}
+ if(name==='pattern-pick-center'){pickingPatternCenter=true;$('#pattern-dialog').style.visibility='hidden';$('#canvas').classList.add('pick-center');toast('Click the circular pattern center. Escape cancels picking.');}
+
  if(name==='pattern-cancel')closePattern();
  if(name==='pattern-apply'){
-  const val=(id:string)=>{const el=$<HTMLInputElement>('#'+id);if(!el.value.trim()||!el.checkValidity())throw Error('Enter valid pattern values.');return Number(el.value);};
-  const kind=$<HTMLSelectElement>('#pattern-kind').value;
-  const opts=kind==='rectangular'?{kind:'rectangular' as const,columns:val('columns'),rows:val('rows'),dx:val('pitch-x'),dy:val('pitch-y')}:{kind:'circular' as const,count:val('pattern-count'),centerX:val('pattern-x'),centerY:val('pattern-y'),angle:val('pattern-angle')};
+  const opts=readPatternOptions();
   const copies=patternCopies(picked(),opts,400-shapes().length);insertCopies(copies);closePattern();$<HTMLButtonElement>('[data-action="pattern"]').focus({preventScroll:true});
  }
  if(name==='undo'&&undo.length){redo.push(clone(project));project=undo.pop()!;selected.clear();persist();render();queueGeometry();$<HTMLInputElement>('#project-name').value=project.name;}
@@ -129,6 +149,8 @@ async function action(name:string){
  }catch(err){toast(err instanceof Error?err.message:String(err));}
 }
 app.addEventListener('click',event=>{
+ if(patternCenterClick){patternCenterClick=false;return;}
+ if(pickingPatternCenter)return;
  if(!$('#pattern-dialog').hidden&&!(event.target as HTMLElement).closest('#pattern-dialog,[data-action="pattern"]'))closePattern(false);
  const t=(event.target as HTMLElement).closest<HTMLElement>('button');if(!t)return;
  if(t.dataset.action)void action(t.dataset.action);
@@ -144,7 +166,6 @@ app.addEventListener('keydown',event=>{
  inspectorControls().find(el=>focusKey(el)===key)?.focus();
 });
 app.addEventListener('change',event=>{
- if((event.target as HTMLElement).id==='pattern-kind'){const circular=(event.target as HTMLSelectElement).value==='circular';$('#pattern-rect').hidden=circular;$('#pattern-circle').hidden=!circular;return;}
  const t=event.target as HTMLInputElement|HTMLSelectElement;
  try{
  if(t.id==='project-name'){const v=t.value.trim()||'Untitled enclosure';change(()=>project.name=v);t.value=v;}
@@ -162,7 +183,8 @@ function svgPoint(event:PointerEvent){const svg=$<SVGSVGElement>('#canvas'),p=sv
 let drag:null|{x:number;y:number;items:Shape[];moved:boolean}=null;
 let marquee:null|{x:number;y:number;initial:Set<string>;moved:boolean;clientX:number;clientY:number}=null;
 $('#canvas').addEventListener('pointerdown',event=>{
- const ev=event as PointerEvent;if(ev.button!==0)return;const t=(ev.target as Element).closest<SVGElement>('[data-id]'),p=svgPoint(ev);
+ const ev=event as PointerEvent;if(ev.button!==0)return;
+ if(pickingPatternCenter){const p=svgPoint(ev),size=faceSize(project,face);if(p.x<0||p.y<0||p.x>size.w||p.y>size.h)return;for(const axis of ['x','y'] as const)$<HTMLInputElement>('#pattern-'+axis).value=String(Number(p[axis].toFixed(4)));pickingPatternCenter=false;patternCenterClick=true;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';positionPattern();renderPatternPreview();$<HTMLInputElement>('#pattern-x').focus({preventScroll:true});ev.preventDefault();return;}const t=(ev.target as Element).closest<SVGElement>('[data-id]'),p=svgPoint(ev);
  (document.activeElement as HTMLElement)?.blur();
  if(!t){marquee={x:p.x,y:p.y,initial:ev.shiftKey?new Set(selected):new Set(),moved:false,clientX:ev.clientX,clientY:ev.clientY};if(!ev.shiftKey)selected.clear();renderInspector();renderCanvas();renderToolbar();ev.preventDefault();return;}
  const id=t.dataset.id!;if(!selected.has(id)||ev.shiftKey)select(id,ev.shiftKey);
@@ -179,6 +201,7 @@ window.addEventListener('pointermove',ev=>{
 window.addEventListener('pointerup',()=>{if(marquee){marquee=null;render();}if(drag?.moved){persist();render();queueGeometry();}drag=null;});
 window.addEventListener('pointercancel',()=>{if(drag?.moved){persist();queueGeometry();}drag=null;marquee=null;render();});
 window.addEventListener('keydown',ev=>{
+ if(pickingPatternCenter){if(ev.key==='Escape'){ev.preventDefault();pickingPatternCenter=false;$('#canvas').classList.remove('pick-center');$('#pattern-dialog').style.visibility='';$<HTMLButtonElement>('[data-action="pattern-pick-center"]').focus({preventScroll:true});}return;}
  if(!$('#pattern-dialog').hidden){if(ev.key==='Escape'){ev.preventDefault();closePattern();}else if(ev.key==='Tab'){const controls=[...$('#pattern-dialog').querySelectorAll<HTMLElement>('input,select,button')].filter(e=>e.getClientRects().length);const i=controls.indexOf(document.activeElement as HTMLElement);if(ev.shiftKey&&i===0){ev.preventDefault();controls.at(-1)?.focus();}else if(!ev.shiftKey&&i===controls.length-1){ev.preventDefault();controls[0]?.focus();}}return;}
  if((ev.target as Element).closest('input,textarea,select,button')||!(tab==='control'||tab==='back'))return;
  const mod=ev.metaKey||ev.ctrlKey;

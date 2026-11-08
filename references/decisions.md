@@ -120,3 +120,7 @@ The user approved the complete editor/guide/toolbar revision for deployment; rel
 - Browser verified rectangular Apply/Undo, circular Apply/Undo, Cancel, and rendered dialog. Build and 39 tests pass. Local only pending review.
 
 - Remove redundant Control surface/Back selectors and Project contents label from left sidebar; main tabs alone select the face. Remove Design studio nav label. Left sidebar starts with Cutouts (or Parts), followed by component library; attributes remain right, tools above workspace.
+
+## Compact pattern operation and live preview
+
+Replaced pattern dropdown with standard-size thin SVG rectangular/circular toggle icons beside Pattern. Added mouse center picker, centered/clamped popover placement, and dotted preview copies with guide outlines and center cross. Shared pattern calculation drives preview and Apply. Browser verified mouse picking, changing six instances to four (five preview copies to three), Cancel preserving two actual cutouts, Apply producing seven actual cutouts and removing preview, then Undo restoring the project. Build passes; local pending review.
