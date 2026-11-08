@@ -92,3 +92,5 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - Reduce side rail outer radius from 4.3 to 3.6 mm around unchanged 2.5 mm pilot bores. At equal wall thickness this lifts the 45-degree wall intersection approximately 1 mm; a thinner wall independently changes that intersection. Fully bond rails to thin walls to avoid sealed slivers.
 - Bottom screw pad cylinder depth is 4 mm instead of 9 mm; its local rounded 45-degree support and rear keepout follow the shorter pad. Shared side rails can extend beyond the pad itself.
 - User approved the rendered profile and deployment; see references/release-2026-11-08.md. Physical rigidity/printability remains unvalidated. Internal guides may help rigidity, but depend on the user's layout.
+
+- Latest default thickness decision: shell wall 2 mm AND bottom plate 2 mm, superseding the 1.6 mm shell / 3 mm plate defaults. Preserve explicitly saved project thicknesses and the supported 1.6 mm shell minimum.

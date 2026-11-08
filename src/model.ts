@@ -22,7 +22,7 @@ export function defaultComponents():Component[]{return [
 export function componentLibrary(p:Project):Component[]{return [...defaultComponents().filter(c=>!p.components.some(saved=>saved.id===c.id)),...p.components.map(c=>c.id==='builtin-behringer-fader-60mm'?{...c,shapes:c.shapes.filter(q=>!['fader-mount-front','fader-mount-back'].includes(q.id))}:c)];}
 export const uid = () => crypto.randomUUID();
 export function newProject(): Project {
-  return {version:1,name:'Untitled enclosure',enclosure:{width:180,depth:110,height:50,angle:10,wall:1.6,plate:3,padding:12,autoSize:false,overhang:1.5,woodThickness:6,edge:'chamfer',radius:2,screws:4,color:'#71808a',wood:'walnut'},machining:{tool:1.5875,feed:250,plunge:80,stepDown:0.5,safeZ:5,rpm:10000,through:0.2,stockMargin:8,workholding:'tape'},layouts:{control:[],back:[]},components:[]};
+  return {version:1,name:'Untitled enclosure',enclosure:{width:180,depth:110,height:50,angle:10,wall:2,plate:2,padding:12,autoSize:false,overhang:1.5,woodThickness:6,edge:'chamfer',radius:2,screws:4,color:'#71808a',wood:'walnut'},machining:{tool:1.5875,feed:250,plunge:80,stepDown:0.5,safeZ:5,rpm:10000,through:0.2,stockMargin:8,workholding:'tape'},layouts:{control:[],back:[]},components:[]};
 }
 export const clone = <T>(x:T):T => structuredClone(x);
 export function dimensions(p:Project) {
