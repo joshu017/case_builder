@@ -72,4 +72,5 @@ User selected always including printable end caps alongside the existing CNC pro
 - Validate rear cutouts against local screw-pad gusset keepouts; otherwise a previously valid cutout near a lower screw could leave reinforcement behind its opening.
 - Plastic added to Wood dropdown; case and caps share the selected plastic color/material. Walnut remains default. All output formats remain available.
 - Simplify face selectors to plain gray backgrounds without red stripe or pressed movement.
-- Local comparison SVG, full package and 25 mm print-oriented coupon generated for review. No deployment of this revision yet.
+- Local comparison SVG, full package and 25 mm print-oriented coupon generated for review. User approved and this revision was deployed to joshjacobson.net/casebuilder.
+- User also requested wrong.rodeo/casebuilder. This supersedes the earlier deferral; deployment is authorized but pending access to its Cloudflare zone (not visible to the current Wrangler OAuth login).
