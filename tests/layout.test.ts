@@ -37,3 +37,11 @@ test('button and potentiometer presets use requested holes and fences; slider ha
  const {defaultComponents,componentLibrary}=await import('../src/model');const all=defaultComponents();const button=all.find(c=>c.id==='builtin-button-12mm')!.shapes[0],pot=all.find(c=>c.id==='builtin-potentiometer-20k')!.shapes[0];assert.equal(button.w,7.2);assert.equal(button.kind,'circle');assert.deepEqual(button.guide,{innerWidth:12,innerHeight:12,wall:1,height:2,offsetX:0,offsetY:0});assert.equal(pot.w,7);assert.equal(pot.kind,'circle');assert.equal(pot.guide,undefined);
  const fader=all.find(c=>c.id==='builtin-behringer-fader-60mm')!;assert.equal(fader.shapes.length,1);const p=newProject();p.components=[structuredClone(fader)];p.components[0].shapes.push({...pot,id:'fader-mount-front'});assert.equal(componentLibrary(p).find(c=>c.id===fader.id)!.shapes.length,1);assert.equal(p.components[0].shapes.length,2);
 });
+
+test('patterns preserve independent guides/groups, spacing and circular endpoints without mutating originals',async()=>{
+ const {patternCopies}=await import('../src/layout');const a=q('a',60,50,4,4,'g'),b=q('b',60,60,4,4,'g');a.guide={innerWidth:6,innerHeight:6,wall:1,height:2,offsetX:.2,offsetY:0};const source=[a,b],before=structuredClone(source);
+ const rect=patternCopies(source,{kind:'rectangular',columns:3,rows:2,dx:12.5,dy:20});assert.equal(rect.length,10);assert.equal(rect[0].x,72.5);assert.equal(rect[0].group,rect[1].group);assert.notEqual(rect[0].group,rect[2].group);assert.notEqual(rect[0].guide,a.guide);
+ const ring=patternCopies([a],{kind:'circular',count:4,centerX:52,centerY:52,angle:360});assert.equal(ring.length,3);assert.ok(Math.abs(ring[0].x-50)<1e-8);assert.ok(Math.abs(ring[0].y-60)<1e-8);assert.equal(ring[0].w,4);assert.deepEqual(ring[0].guide,a.guide);
+ const arc=patternCopies([a],{kind:'circular',count:3,centerX:52,centerY:52,angle:-180});assert.ok(Math.abs(arc[1].x-40)<1e-8);
+ assert.throws(()=>patternCopies(source,{kind:'rectangular',columns:20,rows:20,dx:1,dy:1},10),/limit/);assert.throws(()=>patternCopies([a],{kind:'circular',count:3,centerX:62,centerY:52,angle:360}),/radius/);assert.deepEqual(source,before);
+});
