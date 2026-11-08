@@ -108,3 +108,12 @@ test('bottom gussets no longer project a square shelf beside the circular boss',
  }
  s.delete();
 });
+
+test('plastic outer cap treatment preserves flat mating face, symmetry and portable settings',()=>{
+ for(const edge of ['chamfer','fillet'] as const){
+  const p=newProject();Object.assign(p.enclosure,{wood:'plastic',edge});const base=buildAssembly(wasm,p);p.enclosure.capOuterEdges=true;assert.deepEqual(parseProject(JSON.stringify(p)),p);const a=buildAssembly(wasm,p);valid(a.left);valid(a.right);assert.ok(a.left.volume<base.left.volume);close(a.left.volume,a.right.volume);assert.deepEqual(a.capOutline,base.capOutline);close(a.shell.volume,base.shell.volume);
+  const b=solid(base.left),c=solid(a.left);const slab=wasm.Manifold.cube([.2,200,200]).translate([-.2,-20,-20]);const bi=b.intersect(slab),ci=c.intersect(slab);close(bi.volume(),ci.volume(),.01);[b,c,slab,bi,ci].forEach(x=>x.delete());
+  const zip=unzipSync(exportPackage(p,a));assert.match(strFromU8(zip['README.txt']),/G-code does not machine/);
+  p.enclosure.wood='walnut';close(buildAssembly(wasm,p).left.volume,base.left.volume);
+ }
+});

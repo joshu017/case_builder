@@ -32,3 +32,8 @@ test('hardware margins protect only top/bottom on both faces; sides still enforc
  shape.x=1;assert.ok(issues(p).some(x=>x.includes('side edge')));
  }
 });
+
+test('button and potentiometer presets use requested holes and fences; slider has no mounting cutouts',async()=>{
+ const {defaultComponents,componentLibrary}=await import('../src/model');const all=defaultComponents();const button=all.find(c=>c.id==='builtin-button-12mm')!.shapes[0],pot=all.find(c=>c.id==='builtin-potentiometer-20k')!.shapes[0];assert.equal(button.w,7.2);assert.equal(button.kind,'circle');assert.deepEqual(button.guide,{innerWidth:12,innerHeight:12,wall:1,height:2,offsetX:0,offsetY:0});assert.equal(pot.w,7);assert.equal(pot.kind,'circle');assert.equal(pot.guide,undefined);
+ const fader=all.find(c=>c.id==='builtin-behringer-fader-60mm')!;assert.equal(fader.shapes.length,1);const p=newProject();p.components=[structuredClone(fader)];p.components[0].shapes.push({...pot,id:'fader-mount-front'});assert.equal(componentLibrary(p).find(c=>c.id===fader.id)!.shapes.length,1);assert.equal(p.components[0].shapes.length,2);
+});

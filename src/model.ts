@@ -4,7 +4,7 @@ export type Shape = { id: string; kind: 'rect' | 'circle'; x: number; y: number;
 export type Component = { id: string; name: string; shapes: Shape[] };
 export type Project = {
   version: 1; name: string;
-  enclosure: { width: number; depth: number; height: number; angle: number; wall: number; plate: number; padding: number; autoSize: boolean; overhang: number; woodThickness: number; edge: 'sharp' | 'chamfer' | 'fillet'; radius: number; screws: 4 | 6; color: string; wood: 'walnut' | 'maple' | 'cherry' | 'oak' | 'plastic' };
+  enclosure: { width: number; depth: number; height: number; angle: number; wall: number; plate: number; padding: number; autoSize: boolean; overhang: number; woodThickness: number; capOuterEdges?: boolean; edge: 'sharp' | 'chamfer' | 'fillet'; radius: number; screws: 4 | 6; color: string; wood: 'walnut' | 'maple' | 'cherry' | 'oak' | 'plastic' };
   machining: { tool: number; feed: number; plunge: number; stepDown: number; safeZ: number; rpm: number; through: number; stockMargin: number; workholding: 'tape'; };
   layouts: Record<Face, Shape[]>; components: Component[];
 };
@@ -14,12 +14,12 @@ export function defaultComponents():Component[]{return [
  // User drawing: 75 × 9 body, 60 travel, 71 mounting pitch, M2 threads.
  // Panel clearances and fence allowance are editable assumptions, not drawing dimensions.
  {id:'builtin-behringer-fader-60mm',name:'Behringer-style fader · 60 mm travel',shapes:[
-  {id:'fader-slot',name:'Fader slot · 66 × 3 mm',kind:'rect',x:3,y:4.5,w:3,h:66,corner:'fillet',radius:1.5,guide:{innerWidth:9.4,innerHeight:75.4,wall:1,height:2,offsetX:0,offsetY:0}},
-  {id:'fader-mount-front',name:'M2 mounting clearance',kind:'circle',x:3.4,y:.9,w:2.2,h:2.2},
-  {id:'fader-mount-back',name:'M2 mounting clearance',kind:'circle',x:3.4,y:71.9,w:2.2,h:2.2}
- ]}
+  {id:'fader-slot',name:'Fader slot · 66 × 3 mm',kind:'rect',x:3,y:4.5,w:3,h:66,corner:'fillet',radius:1.5,guide:{innerWidth:9.4,innerHeight:75.4,wall:1,height:2,offsetX:0,offsetY:0}}
+ ]},
+ {id:'builtin-button-12mm',name:'12 mm button',shapes:[{id:'button-opening',name:'12 mm button',kind:'circle',x:0,y:0,w:7.2,h:7.2,guide:{innerWidth:12,innerHeight:12,wall:1,height:2,offsetX:0,offsetY:0}}]},
+ {id:'builtin-potentiometer-20k',name:'20k potentiometer',shapes:[{id:'pot-opening',name:'20k potentiometer',kind:'circle',x:0,y:0,w:7,h:7}]}
 ];}
-export function componentLibrary(p:Project):Component[]{return [...defaultComponents().filter(c=>!p.components.some(saved=>saved.id===c.id)),...p.components];}
+export function componentLibrary(p:Project):Component[]{return [...defaultComponents().filter(c=>!p.components.some(saved=>saved.id===c.id)),...p.components.map(c=>c.id==='builtin-behringer-fader-60mm'?{...c,shapes:c.shapes.filter(q=>!['fader-mount-front','fader-mount-back'].includes(q.id))}:c)];}
 export const uid = () => crypto.randomUUID();
 export function newProject(): Project {
   return {version:1,name:'Untitled enclosure',enclosure:{width:180,depth:110,height:50,angle:10,wall:3,plate:3,padding:12,autoSize:false,overhang:1.5,woodThickness:6,edge:'chamfer',radius:2,screws:4,color:'#71808a',wood:'walnut'},machining:{tool:1.5875,feed:250,plunge:80,stepDown:0.5,safeZ:5,rpm:10000,through:0.2,stockMargin:8,workholding:'tape'},layouts:{control:[],back:[]},components:[]};
@@ -70,6 +70,7 @@ export function issues(p:Project):string[] {
  if(d.frontHeight<22) out.push('Front height must be at least 22 mm for the screw rails. Increase rear height or reduce depth / total angle.');
  if(d.width<40||d.depth<35) out.push('Case width must be at least 40 mm and depth at least 35 mm.');
  if(e.wall<2||e.wall>6||e.plate<2||e.plate>5) out.push('Wall thickness must be 2–6 mm; bottom plate thickness must be 2–5 mm.');
+ if(e.wood==='plastic'&&e.capOuterEdges&&e.edge!=='sharp'&&e.radius>e.woodThickness-1)out.push('Cap edge size must leave at least 1 mm of full-thickness rim.');
  if(e.radius>Math.min(5,e.wall+1))out.push('Profile corner size must not exceed 5 mm or wall thickness + 1 mm.');
  for(const f of ['control','back'] as Face[]) {
   const size=faceSize(p,f);
@@ -104,6 +105,7 @@ export function parseProject(text:string):Project {
  for(const [k,lo,hi] of [['angle',0,30],['wall',2,6],['plate',2,5],['padding',12,100],['overhang',0,10],['woodThickness',4,25],['radius',0,5]] as const)base.enclosure[k]=num(e,k,lo,hi);
  if(!['sharp','chamfer','fillet'].includes(e.edge)||![4,6].includes(e.screws)||!['walnut','maple','cherry','oak','plastic'].includes(e.wood)||!/^#[0-9a-f]{6}$/i.test(e.color)||typeof e.autoSize!=='boolean')throw Error('Invalid enclosure options.');
  Object.assign(base.enclosure,{edge:e.edge,screws:e.screws,wood:e.wood,color:e.color,autoSize:e.autoSize});
+ if(e.capOuterEdges!==undefined){if(typeof e.capOuterEdges!=='boolean')throw Error('Invalid cap edge option.');base.enclosure.capOuterEdges=e.capOuterEdges;}
  for(const [k,lo,hi] of [['tool',1,4],['feed',10,1000],['plunge',10,300],['stepDown',0.1,1],['safeZ',2,20],['rpm',1000,10000],['through',0,0.5],['stockMargin',5,30]] as const)base.machining[k]=num(m,k,lo,hi);
  if(![1.5875,3.175].includes(m.tool)||m.workholding!=='tape')throw Error('Unsupported cutter or workholding.');
  const shapes=(arr:unknown):Shape[]=>{

@@ -135,6 +135,19 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
   }
   const capCS=keep(outerCS.offset(e.overhang,'Miter'));
   let cap=extrude(capCS,e.woodThickness);
+  if(e.wood==='plastic'&&e.capOuterEdges&&e.edge!=='sharp'&&e.radius>0){
+   // Convex hull of inset sections: outside is z=0, mating face stays full-size.
+   const r=e.radius,steps=e.edge==='fillet'?24:1,points:[number,number,number][]=[];
+   for(let i=0;i<=steps;i++){
+    const theta=i/steps*Math.PI/2;
+    const z=e.edge==='fillet'?r*(1-Math.cos(theta)):r*i/steps;
+    const inset=e.edge==='fillet'?r*(1-Math.sin(theta)):r-z;
+    const section=keep(capCS.offset(-inset,'Miter'));
+    for(const [x,y] of section.toPolygons()[0])points.push([x,y,z]);
+   }
+   for(const [x,y] of capCS.toPolygons()[0])points.push([x,y,e.woodThickness]);
+   cap=keep(M.hull(points));
+  }
   for(const [y,z] of screwCenters(p)) {
    cap=cut(cap,move(cyl(e.woodThickness+2,1.7),[y,z,-1]));
    // Outside face is local z=0; cylindrical socket-head recess.
