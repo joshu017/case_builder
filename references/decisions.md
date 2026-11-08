@@ -130,3 +130,9 @@ Replaced pattern dropdown with standard-size thin SVG rectangular/circular toggl
 Original selection is now a provisional draggable source for rectangular and circular operations. Preview and visible original use the same draft coordinates; actual project remains unchanged until Apply. Browser verified rectangular dragging with dialog visible and Cancel restoring exact original coordinates, circular source dragging, Apply adding five copies, and single Undo restoring the original 17-cutout project. Build passed; local only.
 
 - Latest margin request: default top/bottom hardware margin is 11 mm (supersedes 13 mm). Retain adaptive increases for thicker walls/larger profile corners and local rear screw-gusset collision checks; side hardware margins remain zero.
+
+## Slim extrusion review
+- Latest user request: default shell wall 1.6 mm, superseding 3 mm and the interim 2 mm. Bottom plate remains 3 mm. Accept 1.6 mm through UI, portable JSON and MCP; preserve saved thickness choices.
+- Reduce side rail outer radius from 4.3 to 3.6 mm around unchanged 2.5 mm pilot bores. At equal wall thickness this lifts the 45-degree wall intersection approximately 1 mm; a thinner wall independently changes that intersection. Fully bond rails to thin walls to avoid sealed slivers.
+- Bottom screw pad cylinder depth is 4 mm instead of 9 mm; its local rounded 45-degree support and rear keepout follow the shorter pad. Shared side rails can extend beyond the pad itself.
+- This is a local geometry review, not a deployment or physical rigidity/printability validation. Internal guides may help rigidity, but depend on the user's layout.

@@ -22,7 +22,7 @@ export function defaultComponents():Component[]{return [
 export function componentLibrary(p:Project):Component[]{return [...defaultComponents().filter(c=>!p.components.some(saved=>saved.id===c.id)),...p.components.map(c=>c.id==='builtin-behringer-fader-60mm'?{...c,shapes:c.shapes.filter(q=>!['fader-mount-front','fader-mount-back'].includes(q.id))}:c)];}
 export const uid = () => crypto.randomUUID();
 export function newProject(): Project {
-  return {version:1,name:'Untitled enclosure',enclosure:{width:180,depth:110,height:50,angle:10,wall:3,plate:3,padding:12,autoSize:false,overhang:1.5,woodThickness:6,edge:'chamfer',radius:2,screws:4,color:'#71808a',wood:'walnut'},machining:{tool:1.5875,feed:250,plunge:80,stepDown:0.5,safeZ:5,rpm:10000,through:0.2,stockMargin:8,workholding:'tape'},layouts:{control:[],back:[]},components:[]};
+  return {version:1,name:'Untitled enclosure',enclosure:{width:180,depth:110,height:50,angle:10,wall:1.6,plate:3,padding:12,autoSize:false,overhang:1.5,woodThickness:6,edge:'chamfer',radius:2,screws:4,color:'#71808a',wood:'walnut'},machining:{tool:1.5875,feed:250,plunge:80,stepDown:0.5,safeZ:5,rpm:10000,through:0.2,stockMargin:8,workholding:'tape'},layouts:{control:[],back:[]},components:[]};
 }
 export const clone = <T>(x:T):T => structuredClone(x);
 export function dimensions(p:Project) {
@@ -49,9 +49,9 @@ export function bottomCenters(p:Project):[number,number][] {
 export function bottomGussetProfile(p:Project,y:number):[number,number][] {
  const d=dimensions(p),e=p.enclosure,r=4.3,front=y<d.surfaceDepth/2,sign=front?1:-1;
  const c2=Math.cos(2*d.a),s2=Math.sin(2*d.a);
- const innerH=c2*(y+sign*r)+s2*(front?e.plate+9:e.plate)+d.s*d.rise;
- const rampV=s2*(y-r)-c2*(e.plate+9)-d.c*d.rise-0.1;
- const joinV=s2*(y+r)-c2*(e.plate+8.9)-d.c*d.rise+0.1;
+ const innerH=c2*(y+sign*r)+s2*(front?e.plate+4:e.plate)+d.s*d.rise;
+ const rampV=s2*(y-r)-c2*(e.plate+4)-d.c*d.rise-0.1;
+ const joinV=s2*(y+r)-c2*(e.plate+3.9)-d.c*d.rise+0.1;
  const wall=front?e.wall-0.25:d.depth-e.wall+0.25;
  const anchorV=(rampV+sign*(wall/d.c-innerH))/(1+sign*d.t);
  const at=(h:number,v:number):[number,number]=>[d.c*h+d.s*v,d.s*h-d.c*v];
@@ -69,7 +69,7 @@ export function issues(p:Project):string[] {
  const e=p.enclosure,d=dimensions(p), margin=layoutMargin(p), out:string[]=[];
  if(d.frontHeight<22) out.push('Front height must be at least 22 mm for the screw rails. Increase rear height or reduce depth / total angle.');
  if(d.width<40||d.depth<35) out.push('Case width must be at least 40 mm and depth at least 35 mm.');
- if(e.wall<2||e.wall>6||e.plate<2||e.plate>5) out.push('Wall thickness must be 2–6 mm; bottom plate thickness must be 2–5 mm.');
+ if(e.wall<1.6||e.wall>6||e.plate<2||e.plate>5) out.push('Wall thickness must be 1.6–6 mm; bottom plate thickness must be 2–5 mm.');
  if(e.wood==='plastic'&&e.capOuterEdges&&e.edge!=='sharp'&&e.radius>e.woodThickness-1)out.push('Cap edge size must leave at least 1 mm of full-thickness rim.');
  if(e.radius>Math.min(5,e.wall+1))out.push('Profile corner size must not exceed 5 mm or wall thickness + 1 mm.');
  for(const f of ['control','back'] as Face[]) {
@@ -102,7 +102,7 @@ export function parseProject(text:string):Project {
  const num=(o:Record<string,unknown>, k:string,lo:number,hi:number)=>{if(typeof o?.[k]!=='number'||!Number.isFinite(o[k])||(o[k] as number)<lo||(o[k] as number)>hi)throw Error(`Invalid ${k}.`);return o[k] as number;};
  const e=raw.enclosure,m=raw.machining;
  for(const k of ['width','depth','height'] as const)base.enclosure[k]=num(e,k,10,1000);
- for(const [k,lo,hi] of [['angle',0,30],['wall',2,6],['plate',2,5],['padding',12,100],['overhang',0,10],['woodThickness',4,25],['radius',0,5]] as const)base.enclosure[k]=num(e,k,lo,hi);
+ for(const [k,lo,hi] of [['angle',0,30],['wall',1.6,6],['plate',2,5],['padding',12,100],['overhang',0,10],['woodThickness',4,25],['radius',0,5]] as const)base.enclosure[k]=num(e,k,lo,hi);
  if(!['sharp','chamfer','fillet'].includes(e.edge)||![4,6].includes(e.screws)||!['walnut','maple','cherry','oak','plastic'].includes(e.wood)||!/^#[0-9a-f]{6}$/i.test(e.color)||typeof e.autoSize!=='boolean')throw Error('Invalid enclosure options.');
  Object.assign(base.enclosure,{edge:e.edge,screws:e.screws,wood:e.wood,color:e.color,autoSize:e.autoSize});
  if(e.capOuterEdges!==undefined){if(typeof e.capOuterEdges!=='boolean')throw Error('Invalid cap edge option.');base.enclosure.capOuterEdges=e.capOuterEdges;}

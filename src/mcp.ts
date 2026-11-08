@@ -11,7 +11,7 @@ const shape = z.object({id:z.string().max(100),name,kind:z.enum(['rect','circle'
 const enclosure = z.object({
  width:mm(10,1000),depth:mm(10,1000),height:mm(10,1000).describe('Exterior rear height; front height is calculated.'),
  angle:mm(0,30).describe('TOTAL included angle in degrees: 10 means +5 top and -5 bottom.'),
- wall:mm(2,6),plate:mm(2,5),padding:mm(12,100),autoSize:z.boolean(),overhang:mm(0,10),
+ wall:mm(1.6,6),plate:mm(2,5),padding:mm(12,100),autoSize:z.boolean(),overhang:mm(0,10),
  woodThickness:mm(4,25).describe('Shared end-cap thickness for both printed and milled caps.'),
  capOuterEdges:z.boolean().optional().describe('Plastic caps only: apply profile corner treatment to outside perimeter, keeping inside flat.'),edge:z.enum(['sharp','chamfer','fillet']),radius:mm(0,5),screws:z.union([z.literal(4),z.literal(6)]),color:z.string().regex(/^#[0-9a-f]{6}$/i),wood:z.enum(['walnut','maple','cherry','oak','plastic'])
 }).strict();

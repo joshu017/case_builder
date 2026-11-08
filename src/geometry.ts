@@ -25,7 +25,7 @@ export function softened(poly:Vec2[], amount:number, mode:string):Vec2[] {
  return out;
 }
 /** Small 1.25 mm chamfers at wall/rail intersections, with a bonded overlap. */
-export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radius=4.3):Vec2[][] {
+export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radius=3.6):Vec2[][] {
  const distance=(center[0]-wallPoint[0])*inward[0]+(center[1]-wallPoint[1])*inward[1];
  const tangent:Vec2=[-inward[1],inward[0]], overlap=0.25;
  const intersection=Math.sqrt(Math.max(0,radius*radius-distance*distance));
@@ -35,6 +35,13 @@ export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radiu
  const depth=(run+distance-Math.sqrt(Math.max(0,discriminant)))/2+0.1;
  const origin:Vec2=[center[0]-distance*inward[0],center[1]-distance*inward[1]];
  const at=(u:number,v:number):Vec2=>[origin[0]+u*tangent[0]+v*inward[0],origin[1]+u*tangent[1]+v*inward[1]];
+ // A thin wall can sit outside the reduced rail radius. Bridge that gap fully
+ // instead of leaving sealed slivers between the rail, wall and print gusset.
+ if(distance>=radius-.1){
+  const points=[at(-radius,-overlap),at(radius,-overlap),at(radius,distance),at(-radius,distance)];
+  const [a,b,c]=points;if((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])<0)points.reverse();
+  return [points];
+ }
  return [-1,1].map(sign=>{
   const points=[at(sign*(run+overlap),-overlap),at(sign*(run-depth),depth),at(0,-overlap)];
   const [a,b,c]=points;
@@ -43,7 +50,7 @@ export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radiu
  });
 }
 /** Straight 45-degree gusset covering the full bed-facing half of a rail. */
-export function printRailGusset(p:Project,center:Vec2,radius=4.3):Vec2[] {
+export function printRailGusset(p:Project,center:Vec2,radius=3.6):Vec2[] {
  const d=dimensions(p),front=center[0]<d.depth/2,sign=front?1:-1;
  // h is across the profile; v increases away from the bed with control face down.
  const h=d.c*center[0]+d.s*center[1],v=d.s*center[0]-d.c*center[1];
@@ -84,7 +91,7 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
   let shell=cut(outer,yz(extrude(inner,d.width)));
   for(const [i,center] of screwCenters(p).entries()) {
    const [y,z]=center;
-   shell=add(shell,move(rotate(cyl(d.width,4.3),[0,90,0]),[0,y,z]));
+   shell=add(shell,move(rotate(cyl(d.width,3.6),[0,90,0]),[0,y,z]));
    const front=i===0||i===3;
    const webs=railWallChamfers(center,[front?e.wall:d.depth-e.wall,0],[front?1:-1,0]);
    if(i>=2)webs.push(...railWallChamfers(center,[0,e.height-d.rise-topOffset],[d.s,-d.c]));
@@ -92,7 +99,7 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    shell=add(shell,yz(extrude(cross(printRailGusset(p,center)),d.width)));
   }
   for(const [x,y] of bottomCenters(p)) {
-   const boss=bottomFrame(move(cyl(9,4.3),[x,y,e.plate]));
+   const boss=bottomFrame(move(cyl(4,4.3),[x,y,e.plate]));
    const points=bottomGussetProfile(p,y);
    // A straight triangular rib only at each screw pad, 8.6 mm wide.
    shell=add(shell,boss);
