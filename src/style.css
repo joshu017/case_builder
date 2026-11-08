@@ -202,3 +202,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 @media(min-width:851px){nav{padding-left:220px}}
 @media(min-width:851px) and (max-width:1150px){nav{padding-left:185px}}
 @media(min-width:1600px){nav{padding-left:240px}}
+/* Shapes left, positioning centered in available space, controls right. */
+.editor-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.editor-toolbar .shape-tools{justify-self:start}
+.editor-toolbar .position-tools{justify-self:center;display:flex;align-items:center;gap:5px}
+.editor-toolbar #layout-tools{display:flex;gap:5px}
+.editor-toolbar .editor-actions{justify-self:end;margin-left:0}
+.editor-toolbar .shape-tools .icon-button{font-size:20px;line-height:1}
+@media(max-width:1150px){.editor-toolbar{grid-template-columns:auto minmax(0,1fr)}.editor-toolbar .editor-actions{grid-column:1/-1;justify-self:end}}
