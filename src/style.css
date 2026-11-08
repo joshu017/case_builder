@@ -221,3 +221,4 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 #pattern-dialog .pick-center-button[hidden]{display:none}
 #pattern-preview{fill:#c4cfd720;stroke:#85949f;stroke-width:.45;stroke-dasharray:1.4 1}
 #pattern-preview .pattern-center{fill:none;stroke:#4a5661;stroke-width:.6;stroke-dasharray:none}
+#pattern-dialog .pattern-center-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 25px;gap:8px;align-items:end;margin-top:6px}
