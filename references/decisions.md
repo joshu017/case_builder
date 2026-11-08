@@ -124,3 +124,7 @@ The user approved the complete editor/guide/toolbar revision for deployment; rel
 ## Compact pattern operation and live preview
 
 Replaced pattern dropdown with standard-size thin SVG rectangular/circular toggle icons beside Pattern. Added mouse center picker, centered/clamped popover placement, and dotted preview copies with guide outlines and center cross. Shared pattern calculation drives preview and Apply. Browser verified mouse picking, changing six instances to four (five preview copies to three), Cancel preserving two actual cutouts, Apply producing seven actual cutouts and removing preview, then Undo restoring the project. Build passes; local pending review.
+
+## Draggable pattern source
+
+Original selection is now a provisional draggable source for rectangular and circular operations. Preview and visible original use the same draft coordinates; actual project remains unchanged until Apply. Browser verified rectangular dragging with dialog visible and Cancel restoring exact original coordinates, circular source dragging, Apply adding five copies, and single Undo restoring the original 17-cutout project. Build passed; local only.
