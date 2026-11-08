@@ -91,3 +91,11 @@ User selected always including printable end caps alongside the existing CNC pro
 User requested removing the entire duplicate Control surface/Back heading area. Layout tabs now begin with tools; SVG/DXF exports share the upper-right Undo/Redo/Fit view group. On narrow centers, whole toolbar groups wrap while export and history actions stay together. Geometry feedback remains an overlay below the toolbar; Assembly and Manufacturing headings remain.
 
 The user approved the complete editor/guide/toolbar revision for deployment; released to joshjacobson.net/casebuilder. This supersedes the local-only status above. wrong.rodeo remains deferred.
+
+## Inspector keyboard focus and default USB-C component
+
+- User withdrew the reported viewport/zoom issue; no viewport change made for that report.
+- Commit-on-blur previously rebuilt the right inspector and discarded browser focus. Tab now commits before resolving the next field in the replacement DOM; Shift+Tab works in reverse. Option changes preserve focus across inspector rebuilds.
+- Add a global default USB-C preset available alongside existing custom libraries. Nominal clearance opening: 9.4 × 3.6 mm, fillet R1.8, no guide/fence. Inserted definitions are embedded into the project; custom definitions with the same ID are preserved.
+- Reference: Amphenol 10168357 receptacle drawing https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/10168357.pdf. Connector interface and shell dimensions differ from panel clearance; the selected preset is a practical editable clearance allowance, not a guaranteed fit for every connector or cable overmold.
+- Browser verified an edited cutout Width advances to Height; Shift+Tab returns to Width without losing the committed decimal value. This revision is local pending review.

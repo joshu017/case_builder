@@ -19,3 +19,7 @@ test('rectangle corner outlines preserve exact extents, portable decimals and va
  shape.radius=1.7;assert.ok(issues(p).some(x=>x.includes('corner size')));
 });
 test('out-of-range alignment fails without partially moving a selection',()=>{const a=q('a',1,1,2,2),b=q('b',40,40,50,50),old=structuredClone([a,b]);assert.throws(()=>arrange([a,b],'align-horizontal',{w:180,h:110}),/coordinate range/);assert.deepEqual([a,b],old);});
+
+test('default USB-C library is available to existing projects without adding guides or mutating custom components',async()=>{
+ const {componentLibrary,defaultComponents}=await import('../src/model');const p=newProject(),c=componentLibrary(p).find(c=>c.id==='builtin-usb-c-port')!;assert.ok(c);assert.equal(c.shapes[0].corner,'fillet');assert.equal(c.shapes[0].guide,undefined);assert.equal(p.components.length,0);p.components.push(structuredClone(c));p.components[0].shapes[0].w=10;assert.equal(componentLibrary(p).filter(x=>x.id===c.id).length,1);assert.equal(defaultComponents()[0].shapes[0].w,9.4);assert.deepEqual(parseProject(JSON.stringify(p)),p);
+});
