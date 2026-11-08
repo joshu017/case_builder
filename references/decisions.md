@@ -128,3 +128,5 @@ Replaced pattern dropdown with standard-size thin SVG rectangular/circular toggl
 ## Draggable pattern source
 
 Original selection is now a provisional draggable source for rectangular and circular operations. Preview and visible original use the same draft coordinates; actual project remains unchanged until Apply. Browser verified rectangular dragging with dialog visible and Cancel restoring exact original coordinates, circular source dragging, Apply adding five copies, and single Undo restoring the original 17-cutout project. Build passed; local only.
+
+- Latest margin request: default top/bottom hardware margin is 11 mm (supersedes 13 mm). Retain adaptive increases for thicker walls/larger profile corners and local rear screw-gusset collision checks; side hardware margins remain zero.

@@ -63,7 +63,7 @@ export function backGussetKeepouts(p:Project) {
  const d=dimensions(p);
  return bottomCenters(p).filter(([,y])=>y>d.surfaceDepth/2).map(([x,y])=>({x:x-4.8,w:9.6,h:Math.max(...bottomGussetProfile(p,y).map(q=>q[1]))+0.5}));
 }
-export function layoutMargin(p:Project) { const e=p.enclosure; return Math.max(13,Math.max(6,e.wall+3,e.radius+3)+6); }
+export function layoutMargin(p:Project) { const e=p.enclosure; return Math.max(11,Math.max(6,e.wall+3,e.radius+3)+5); }
 export function guideBounds(q:Shape){const g=q.guide!;return {x:q.x+q.w/2+g.offsetX-g.innerWidth/2-g.wall,y:q.y+(q.kind==='circle'?q.w:q.h)/2+g.offsetY-g.innerHeight/2-g.wall,w:g.innerWidth+2*g.wall,h:g.innerHeight+2*g.wall};}
 export function issues(p:Project):string[] {
  const e=p.enclosure,d=dimensions(p), margin=layoutMargin(p), out:string[]=[];

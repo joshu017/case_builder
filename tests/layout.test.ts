@@ -27,7 +27,7 @@ test('default USB-C library is available to existing projects without adding gui
 test('hardware margins protect only top/bottom on both faces; sides still enforce face bounds',()=>{
  for(const face of ['control','back'] as const){const p=newProject(),shape=q('edge',1,20,5,5);p.layouts[face]=[shape];assert.deepEqual(issues(p),[]);
  shape.x=174;assert.deepEqual(issues(p),[]);shape.x=176;assert.ok(issues(p).some(x=>x.includes('side edge')));
- shape.x=1;shape.y=12;assert.ok(issues(p).some(x=>x.includes('top/bottom hardware margin')));
+ shape.x=1;shape.y=10.9;assert.ok(issues(p).some(x=>x.includes('top/bottom hardware margin')));
  shape.x=2;shape.y=20;shape.guide={innerWidth:7,innerHeight:7,wall:1,height:2,offsetX:0,offsetY:0};assert.deepEqual(issues(p),[]);
  shape.x=1;assert.ok(issues(p).some(x=>x.includes('side edge')));
  }
@@ -45,3 +45,5 @@ test('patterns preserve independent guides/groups, spacing and circular endpoint
  const arc=patternCopies([a],{kind:'circular',count:3,centerX:52,centerY:52,angle:-180});assert.ok(Math.abs(arc[1].x-40)<1e-8);
  assert.throws(()=>patternCopies(source,{kind:'rectangular',columns:20,rows:20,dx:1,dy:1},10),/limit/);assert.throws(()=>patternCopies([a],{kind:'circular',count:3,centerX:62,centerY:52,angle:360}),/radius/);assert.deepEqual(source,before);
 });
+
+test('default hardware margin is 11 mm and accepts the exact top/bottom boundary',async()=>{const {layoutMargin,faceSize}=await import('../src/model');const p=newProject();assert.equal(layoutMargin(p),11);for(const face of ['control','back'] as const){p.layouts[face]=[q('edge',50,11,4,4),q('upper',60,faceSize(p,face).h-15,4,4)];}assert.deepEqual(issues(p),[]);});
