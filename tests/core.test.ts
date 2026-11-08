@@ -51,7 +51,49 @@ test('bottom flathead seats taper at 90 degrees on the outside face',()=>{
  const hits=b.rayCast(at(2.5,-1),at(2.5,4));assert.equal(hits.length,2);
  const clear=b.rayCast(at(2.5,0.1),at(2.5,0.6));assert.equal(clear.length,0);
  const crossing=b.rayCast(at(2.5,0.6),at(2.5,0.8));assert.equal(crossing.length,1);
- close(6-p.enclosure.plate-0.25,3.75);b.delete();
+ close(6-p.enclosure.plate,4);b.delete();
+});
+
+test('extrusion ends flush with screw pads and full-profile plate seats without a gap',()=>{
+ for(const [angle,plate] of [[0,2],[10,2],[30,5]]){
+  const p=newProject();Object.assign(p.enclosure,{angle,plate,height:90});
+  const d=dimensions(p),a=buildAssembly(wasm,p),s=solid(a.shell),b=solid(a.bottom);
+  const normal=(v:number[])=>v[1]*d.s+(v[2]-d.rise)*d.c;
+  const levels=(m:MeshData)=>Array.from({length:m.positions.length/3},(_,i)=>normal(Array.from(m.positions.slice(i*3,i*3+3))));
+  close(Math.min(...levels(a.shell)),plate);close(Math.min(...levels(a.bottom)),0);
+  const wallSeats=[p.enclosure.wall/2,d.depth-p.enclosure.wall/2].map(y=>[d.width/2,(y-plate*d.s)/d.c]);
+  for(const [x,y] of [...bottomCenters(p),...wallSeats]){
+   // Sample the seating annulus outside both the pilot and plate clearance bore.
+   const point=(n:number):[number,number,number]=>[x+2,y*d.c+n*d.s,d.rise-y*d.s+n*d.c];
+   const shellHits=s.rayCast(point(-1),point(plate+.5));assert.equal(shellHits.length,1);
+   close(normal(shellHits[0].position),plate,.0001);
+   const plateHits=b.rayCast(point(plate-.1),point(plate+.5));assert.equal(plateHits.length,1);
+   close(normal(plateHits[0].position),plate,.0001);
+  }
+  const overlap=s.intersect(b);close(overlap.volume(),0,.001);overlap.delete();s.delete();b.delete();
+ }
+});
+
+test('bottom plate STL lies flat with countersinks upward',()=>{
+ for(const [angle,plate] of [[0,2],[10,2],[30,5]]){
+  const p=newProject();Object.assign(p.enclosure,{angle,plate,height:90});
+  const d=dimensions(p),a=buildAssembly(wasm,p),bytes=unzipSync(exportPackage(p,a))['bottom-plate.stl'];
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),vertices:number[]=[],indices:number[]=[],ids=new Map<string,number>();
+  for(let t=0;t<view.getUint32(80,true);t++)for(let k=0;k<3;k++){
+   const pos=[0,1,2].map(c=>view.getFloat32(84+t*50+12+k*12+c*4,true)),key=pos.join(',');
+   if(!ids.has(key)){ids.set(key,vertices.length/3);vertices.push(...pos);}indices.push(ids.get(key)!);
+  }
+  const s=solid({positions:new Float32Array(vertices),indices:new Uint32Array(indices),volume:1});
+  valid({positions:new Float32Array(vertices),indices:new Uint32Array(indices),volume:a.bottom.volume});
+  close(s.boundingBox().min[2],0);close(s.boundingBox().max[2],plate);close(s.volume(),a.bottom.volume,.1);
+  const maxPlateY=Math.max(...Array.from({length:a.bottom.positions.length/3},(_,i)=>a.bottom.positions[i*3+1]*d.c-(a.bottom.positions[i*3+2]-d.rise)*d.s));
+  for(const [x,y] of bottomCenters(p)){
+   const xx=x-.25+2.5,yy=maxPlateY-y;
+   assert.equal(s.rayCast([xx,yy,plate-.6],[xx,yy,plate+1]).length,0,'wide countersink opens upward');
+   assert.equal(s.rayCast([xx,yy,.1],[xx,yy,plate+1]).length,1,'inside face remains the solid bed face');
+  }
+  s.delete();
+ }
 });
 
 test('both cap STLs lie flat with screw-head recesses upward',()=>{

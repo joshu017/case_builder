@@ -110,11 +110,13 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    shell=add(shell,keep(rib.intersect(bottomFrame(footprint))));
   }
   shell=keep(shell.intersect(outer));
-  const plateY=e.wall/d.c+0.25, plateDepth=d.surfaceDepth-2*plateY;
-  // Pocket extends through the open ends; leaves front/back walls and upper screw rails.
-  const pocket=bottomFrame(move(cube([d.width+2,plateDepth+0.5,e.plate+20.25]),[-1,plateY-0.25,-20]));
+  // Trim the entire shell to the screw-pad seating plane: no raised perimeter lip.
+  const pocket=bottomFrame(move(cube([d.width+2,d.surfaceDepth+40,e.plate+20]),[-1,-20,-20]));
   shell=cut(shell,pocket);
-  let bottom=move(cube([d.width-0.5,plateDepth,e.plate]),[0.25,plateY,0]);
+  // The plate replaces the trimmed profile, including its outside corner treatment.
+  // Keep end-cap clearance along X; front/back edges now cover the wall ends.
+  const localOuter=rotate(move(outer,[0,0,-d.rise]),[deg,0,0]);
+  let bottom=keep(move(cube([d.width-0.5,d.surfaceDepth+40,e.plate]),[0.25,-20,0]).intersect(localOuter));
   for(const [x,y] of bottomCenters(p)) {
     shell=cut(shell,bottomFrame(move(cyl(e.plate+11,1.25),[x,y,-1])));
     bottom=cut(bottom,move(cyl(e.plate+2,1.7),[x,y,-1]));

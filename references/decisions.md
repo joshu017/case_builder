@@ -138,3 +138,9 @@ Original selection is now a provisional draggable source for rectangular and cir
 - User approved the rendered profile and deployment; see references/release-2026-11-08.md. Physical rigidity/printability remains unvalidated. Internal guides may help rigidity, but depend on the user's layout.
 
 - Latest default thickness decision: shell wall 2 mm AND bottom plate 2 mm, superseding the 1.6 mm shell / 3 mm plate defaults. Preserve explicitly saved project thicknesses and the supported 1.6 mm shell minimum.
+
+- Bottom-plate STL print orientation: flat inner face on the bed, external flathead countersinks facing UP, minimum Z=0. This changes export orientation only; assembly geometry stays unchanged.
+
+- Flush bottom fit: preserve the recessed plate and rim. Seat the inner plate face exactly one plate thickness from the outside bottom plane, removing the old 0.25 mm axial gap. Retain 0.25 mm lateral clearance. At the 2 mm default, M3x6 nominal boss engagement is 4 mm.
+
+- Superseding flush-fit instruction: remove the entire perimeter rim from the extrusion. Shell walls terminate in the same plane as bottom screw-pad seating faces. The bottom plate covers the trimmed walls and follows the exterior profile/corner treatment, retaining X clearance to end caps. Plate STL remains countersinks-up.
