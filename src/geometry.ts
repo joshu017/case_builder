@@ -97,6 +97,25 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    if(i>=2)webs.push(...railWallChamfers(center,[0,e.height-d.rise-topOffset],[d.s,-d.c]));
    for(const triangle of webs)shell=add(shell,yz(extrude(cross(triangle),d.width)));
    shell=add(shell,yz(extrude(cross(printRailGusset(p,center)),d.width)));
+   if(i<2){
+    // Carry the bottom rails all the way to the plate plane. Their round crowns
+    // otherwise leave a shallow groove between the wall and local screw pads.
+    const railZ=d.s*y+d.c*(z-d.rise);
+    if(railZ>e.plate){
+     // Match the existing gusset's print-vertical inner edge; a bottom-frame
+     // rectangle would introduce an unsupported ledge when the case is sloped.
+     const h=d.c*y+d.s*z+(front?3.6:-3.6),v=d.s*y-d.c*z-3.6*(Math.SQRT2-1)-.02;
+     const seat=e.plate-.1; // overlap the final trim plane to avoid coplanar Boolean slivers
+     const topV=(Math.sin(2*d.a)*h-d.c*d.rise-seat)/Math.cos(2*d.a);
+     const wall=front?e.wall-.25:d.depth-e.wall+.25;
+     const points:Vec2[]=[[wall,d.rise+(seat-wall*d.s)/d.c],
+      [d.c*h+d.s*topV,d.s*h-d.c*topV],
+      [d.c*h+d.s*v,d.s*h-d.c*v],[wall,(d.s*wall-v)/d.c]];
+     const area=points.reduce((sum,a,j)=>{const b=points[(j+1)%points.length];return sum+a[0]*b[1]-b[0]*a[1];},0);
+     if(area<0)points.reverse();
+     shell=add(shell,yz(extrude(cross(points),d.width)));
+    }
+   }
   }
   for(const [x,y] of bottomCenters(p)) {
    const boss=bottomFrame(move(cyl(4,4.3),[x,y,e.plate]));

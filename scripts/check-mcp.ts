@@ -16,7 +16,7 @@ try {
  const exported:any=await client.callTool({name:'export_package',arguments:{project}});assert.ok(!exported.isError,JSON.stringify(exported));
  const file=exported.content.find((x:any)=>x.type==='resource').resource;
  const zip=unzipSync(Buffer.from(file.blob,'base64'));
- for(const name of ['extrusion.stl','bottom-plate.stl','end-cap-left.stl','end-cap-right.stl','end-cap.nc'])assert.ok(zip[name]?.length>100,name);
+ for(const name of ['stl/extrusion.stl','stl/bottom-plate.stl','stl/end-cap-left.stl','stl/end-cap-right.stl','gcode/end-cap.nc'])assert.ok(zip[name]?.length>100,name);
  assert.deepEqual(parseProject(strFromU8(zip['project.json'])),project);
  console.log(JSON.stringify({endpoint,tools:tools.tools.map(t=>t.name),exportMs:Math.round(performance.now()-start),zipBytes:exported.structuredContent.bytes,files:Object.keys(zip)},null,2));
 } finally {await client.close();}

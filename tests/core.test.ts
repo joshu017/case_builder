@@ -18,7 +18,7 @@ test('pilot bores and bottom plate holes align; countersinks face outward',()=>{
 test('six-screw plate, zero overhang and angle zero remain valid',()=>{const p=newProject();p.enclosure.screws=6;p.enclosure.overhang=0;p.enclosure.angle=0;const a=buildAssembly(wasm,p);[a.shell,a.bottom,a.left].forEach(valid);assert.equal(bottomCenters(p).length,6);});
 test('thin front and hardware-margin cutouts block geometry exports',()=>{const p=newProject();p.enclosure.height=25;assert.ok(issues(p).length);assert.throws(()=>buildAssembly(wasm,p));p.enclosure.height=50;p.layouts.control=[{id:'s',kind:'rect',name:'slot',x:1,y:10,w:10,h:5}];assert.ok(issues(p).length);});
 test('CAM compensates outside contours, respects stepdown, emits modal reset and retracts before travel',()=>{const p=newProject(),a=buildAssembly(wasm,p);for(const tool of [1.5875,3.175]){p.machining.tool=tool;const cam=makeToolpath(p,a.capOutline,a.screwCenters);assert.match(cam.code,/G21 G17 G90 G94 G54/);assert.match(cam.code,/G40 G49 G80/);assert.match(cam.code,/M5\nM9\nM2\n$/);assert.doesNotMatch(cam.code,/G28|G30|M6|\$H|\$X/);let z=Infinity,minimum=0,lastCutZ=0;for(const line of cam.code.split('\n')){const match=line.match(/ Z(-?[\d.]+)/);if(line.startsWith('G0 X'))assert.ok(z>=p.machining.safeZ);if(match){const next=Number(match[1]);if(next<0&&z>=0)lastCutZ=0;if(next<0){assert.ok(lastCutZ-next<=p.machining.stepDown+1e-4);lastCutZ=next;}z=next;minimum=Math.min(minimum,z);}}close(minimum,-6.2);assert.ok(cam.width<400&&cam.height<380);}assert.deepEqual(offsetConvex([[0,0],[10,0],[10,10],[0,10]],1),[[-1,-1],[11,-1],[11,11],[-1,11]]);});
-test('ZIP includes reloadable project, valid binary STLs, CNC and unit-aware SVG/DXF',()=>{const p=newProject(),a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));assert.deepEqual(parseProject(strFromU8(files['project.json'])),p);for(const file of ['extrusion.stl','bottom-plate.stl','end-cap-left.stl','end-cap-right.stl']){const b=files[file],view=new DataView(b.buffer,b.byteOffset,b.byteLength);assert.equal(b.length,84+50*view.getUint32(80,true));}assert.match(strFromU8(files['end-cap.nc']),/ONE cap per setup/);assert.match(layoutSVG(p,'control'),/width="180mm"/);assert.match(layoutDXF(p,'control'),/\$INSUNITS\n70\n4/);assert.ok(stl(a.left).length>84);});
+test('ZIP includes reloadable project, valid binary STLs, CNC and unit-aware SVG/DXF',()=>{const p=newProject(),a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));assert.deepEqual(Object.keys(files).sort(),['project.json','README.txt','stl/extrusion.stl','stl/bottom-plate.stl','stl/end-cap-left.stl','stl/end-cap-right.stl','gcode/end-cap.nc','2d/control-surface.svg','2d/control-surface.dxf','2d/back.svg','2d/back.dxf'].sort());assert.deepEqual(parseProject(strFromU8(files['project.json'])),p);for(const file of ['stl/extrusion.stl','stl/bottom-plate.stl','stl/end-cap-left.stl','stl/end-cap-right.stl']){const b=files[file],view=new DataView(b.buffer,b.byteOffset,b.byteLength);assert.equal(b.length,84+50*view.getUint32(80,true));}assert.match(strFromU8(files['gcode/end-cap.nc']),/ONE cap per setup/);assert.match(layoutSVG(p,'control'),/width="180mm"/);assert.match(layoutDXF(p,'control'),/\$INSUNITS\n70\n4/);assert.ok(stl(a.left).length>84);});
 test('thick walls reserve extra hardware margin; bottom countersinks stay inside the plate',()=>{for(const wall of [1.6,2,6])for(const plate of [2,5]){const p=newProject();Object.assign(p.enclosure,{wall,plate});const a=buildAssembly(wasm,p);valid(a.shell);valid(a.bottom);const d=dimensions(p),margin=wall/d.c+0.25;for(const [,y] of bottomCenters(p)){assert.ok(y-3.2>margin);assert.ok(y+3.2<d.surfaceDepth-margin);}}});
 test('print-oriented rail and screw-pad gussets have no steep internal undersides',()=>{
  for(const angle of [0,10,30])for(const wall of [1.6,2,6]) {
@@ -62,7 +62,8 @@ test('extrusion ends flush with screw pads and full-profile plate seats without 
   const levels=(m:MeshData)=>Array.from({length:m.positions.length/3},(_,i)=>normal(Array.from(m.positions.slice(i*3,i*3+3))));
   close(Math.min(...levels(a.shell)),plate);close(Math.min(...levels(a.bottom)),0);
   const wallSeats=[p.enclosure.wall/2,d.depth-p.enclosure.wall/2].map(y=>[d.width/2,(y-plate*d.s)/d.c]);
-  for(const [x,y] of [...bottomCenters(p),...wallSeats]){
+  const railSeats=screwCenters(p).slice(0,2).flatMap(([y,z],i)=>[-2.5,0,2.5].map(offset=>[d.width/2,d.c*y-d.s*(z-d.rise)+offset]));
+  for(const [x,y] of [...bottomCenters(p),...wallSeats,...railSeats]){
    // Sample the seating annulus outside both the pilot and plate clearance bore.
    const point=(n:number):[number,number,number]=>[x+2,y*d.c+n*d.s,d.rise-y*d.s+n*d.c];
    const shellHits=s.rayCast(point(-1),point(plate+.5));assert.equal(shellHits.length,1);
@@ -77,7 +78,7 @@ test('extrusion ends flush with screw pads and full-profile plate seats without 
 test('bottom plate STL lies flat with countersinks upward',()=>{
  for(const [angle,plate] of [[0,2],[10,2],[30,5]]){
   const p=newProject();Object.assign(p.enclosure,{angle,plate,height:90});
-  const d=dimensions(p),a=buildAssembly(wasm,p),bytes=unzipSync(exportPackage(p,a))['bottom-plate.stl'];
+  const d=dimensions(p),a=buildAssembly(wasm,p),bytes=unzipSync(exportPackage(p,a))['stl/bottom-plate.stl'];
   const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),vertices:number[]=[],indices:number[]=[],ids=new Map<string,number>();
   for(let t=0;t<view.getUint32(80,true);t++)for(let k=0;k<3;k++){
    const pos=[0,1,2].map(c=>view.getFloat32(84+t*50+12+k*12+c*4,true)),key=pos.join(',');
@@ -102,7 +103,7 @@ test('both cap STLs lie flat with screw-head recesses upward',()=>{
   const a=buildAssembly(wasm,p),files=unzipSync(exportPackage(p,a));
   const minY=Math.min(...a.capOutline.map(q=>q[0])),minZ=Math.min(...a.capOutline.map(q=>q[1])),maxZ=Math.max(...a.capOutline.map(q=>q[1]));
   for(const side of ['left','right']) {
-   const bytes=files[`end-cap-${side}.stl`],view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),vertices:number[]=[],indices:number[]=[],ids=new Map<string,number>();
+   const bytes=files[`stl/end-cap-${side}.stl`],view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),vertices:number[]=[],indices:number[]=[],ids=new Map<string,number>();
    for(let t=0;t<view.getUint32(80,true);t++)for(let k=0;k<3;k++) {
     const pos=[0,1,2].map(c=>view.getFloat32(84+t*50+12+k*12+c*4,true)),key=pos.join(',');
     if(!ids.has(key)){ids.set(key,vertices.length/3);vertices.push(...pos);}indices.push(ids.get(key)!);

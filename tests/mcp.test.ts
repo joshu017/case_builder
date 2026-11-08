@@ -27,7 +27,7 @@ test('complete MCP design workflow round-trips into browser project and ZIP',asy
  const preview=await call('preview_project',{project:p});assert.match(preview.content[0].resource.text,/±5°/);
  const exported=await call('export_package',{project:p});assert.ok(!exported.isError);
  const zip=unzipSync(Buffer.from(exported.content[1].resource.blob,'base64'));
- for(const file of ['extrusion.stl','bottom-plate.stl','end-cap-left.stl','end-cap-right.stl','end-cap.nc'])assert.ok(zip[file].length>100);
+ for(const file of ['stl/extrusion.stl','stl/bottom-plate.stl','stl/end-cap-left.stl','stl/end-cap-right.stl','gcode/end-cap.nc'])assert.ok(zip[file].length>100);
  assert.deepEqual(parseProject(strFromU8(zip['project.json'])),p);
  const cleared=await call('replace_layout',{project:p,face:'control',shapes:[]});assert.equal(cleared.structuredContent.project.layouts.control.length,0);assert.equal(cleared.structuredContent.project.components.length,1);
 });

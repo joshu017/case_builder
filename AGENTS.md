@@ -100,3 +100,7 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - Flush bottom fit: preserve the recessed plate and rim. Seat the inner plate face exactly one plate thickness from the outside bottom plane, removing the old 0.25 mm axial gap. Retain 0.25 mm lateral clearance. At the 2 mm default, M3x6 nominal boss engagement is 4 mm.
 
 - Superseding flush-fit instruction: remove the entire perimeter rim from the extrusion. Shell walls terminate in the same plane as bottom screw-pad seating faces. The bottom plate covers the trimmed walls and follows the exterior profile/corner treatment, retaining X clearance to end caps. Plate STL remains countersinks-up.
+
+- Remove the residual notch at bottom rail crowns: extend their wall-to-rail seating lands to the exact plate plane, continuous along the extrusion between local screw pads. Keep the rim removed and plate STL countersinks-up.
+
+- Export ZIP organization: project.json and README.txt at root; SVG/DXF in 2d/; all four STL parts in stl/; CNC .nc G-code in gcode/. These are CNC programs, not PCB Gerbers. Applies to browser and MCP packages.
