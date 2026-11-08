@@ -185,3 +185,12 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
  .workspace:not([data-view="manufacturing"]) #bottom-info{margin-top:0}
 }
 .preview-controls{background:transparent;padding:10px 0}
+
+/* Layout tabs start directly with tools; their tab already supplies the face title. */
+.editor-toolbar{position:relative}
+.editor-actions{margin-left:auto}
+.editor-toolbar #notice{display:block;left:auto;right:0;top:100%;transform:none;width:min(360px,100%)}
+.editor-toolbar #notice.error{left:0;width:auto}
+@media(min-width:851px){.workspace[data-view="control"],.workspace[data-view="back"]{grid-template-rows:minmax(0,1fr) auto}}
+.editor-toolbar button{padding:7px 6px}
+.editor-toolbar .icon-button{width:25px;height:29px;padding:3px}

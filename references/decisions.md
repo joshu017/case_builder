@@ -85,3 +85,7 @@ User selected always including printable end caps alongside the existing CNC pro
 - Added 0.02 mm bonded extension at rail ramp tangency to avoid an almost-collinear mesh sliver after the rounded boss Boolean intersection. Bed-facing slope remains 45 degrees.
 - Later user refinement: eliminate the nested center work-area card. Heading, toolbar/drawing area and bottom information form three direct rows on the center background. Status feedback stays overlaid and cannot reflow the drawing.
 - wrong.rodeo remains deferred by the user's latest instruction. This new editor/geometry revision is local only pending review.
+
+## Remove redundant layout headings
+
+User requested removing the entire duplicate Control surface/Back heading area. Layout tabs now begin with tools; SVG/DXF exports share the upper-right Undo/Redo/Fit view group. On narrow centers, whole toolbar groups wrap while export and history actions stay together. Geometry feedback remains an overlay below the toolbar; Assembly and Manufacturing headings remain.
