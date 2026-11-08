@@ -3,7 +3,7 @@ export type Shape = { id: string; kind: 'rect' | 'circle'; x: number; y: number;
 export type Component = { id: string; name: string; shapes: Shape[] };
 export type Project = {
   version: 1; name: string;
-  enclosure: { width: number; depth: number; height: number; angle: number; wall: number; plate: number; padding: number; autoSize: boolean; overhang: number; woodThickness: number; edge: 'sharp' | 'chamfer' | 'fillet'; radius: number; screws: 4 | 6; color: string; wood: 'walnut' | 'maple' | 'cherry' | 'oak' };
+  enclosure: { width: number; depth: number; height: number; angle: number; wall: number; plate: number; padding: number; autoSize: boolean; overhang: number; woodThickness: number; edge: 'sharp' | 'chamfer' | 'fillet'; radius: number; screws: 4 | 6; color: string; wood: 'walnut' | 'maple' | 'cherry' | 'oak' | 'plastic' };
   machining: { tool: number; feed: number; plunge: number; stepDown: number; safeZ: number; rpm: number; through: number; stockMargin: number; workholding: 'tape'; };
   layouts: Record<Face, Shape[]>; components: Component[];
 };
@@ -32,6 +32,24 @@ export function bottomCenters(p:Project):[number,number][] {
   const xs=p.enclosure.screws===6?[14,d.width/2,d.width-14]:[14,d.width-14];
   return xs.flatMap(x=>ys.map(y=>[x,y] as [number,number]));
 }
+/** Straight screw-pad gusset in original Y/Z coordinates; shared with validation. */
+export function bottomGussetProfile(p:Project,y:number):[number,number][] {
+ const d=dimensions(p),e=p.enclosure,r=4.3,front=y<d.surfaceDepth/2,sign=front?1:-1;
+ const c2=Math.cos(2*d.a),s2=Math.sin(2*d.a);
+ const innerH=c2*(y+sign*r)+s2*(front?e.plate+9:e.plate)+d.s*d.rise;
+ const rampV=s2*(y-r)-c2*(e.plate+9)-d.c*d.rise-0.1;
+ const joinV=s2*(y+r)-c2*(e.plate+8.9)-d.c*d.rise+0.1;
+ const wall=front?e.wall-0.25:d.depth-e.wall+0.25;
+ const anchorV=(rampV+sign*(wall/d.c-innerH))/(1+sign*d.t);
+ const at=(h:number,v:number):[number,number]=>[d.c*h+d.s*v,d.s*h-d.c*v];
+ const points=[at(wall/d.c-d.t*anchorV,anchorV),at(innerH,rampV),at(innerH,joinV),at(wall/d.c-d.t*joinV,joinV)];
+ const [a,b,c]=points;if((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])<0)points.reverse();
+ return points;
+}
+export function backGussetKeepouts(p:Project) {
+ const d=dimensions(p);
+ return bottomCenters(p).filter(([,y])=>y>d.surfaceDepth/2).map(([x,y])=>({x:x-4.8,w:9.6,h:Math.max(...bottomGussetProfile(p,y).map(q=>q[1]))+0.5}));
+}
 export function layoutMargin(p:Project) { const e=p.enclosure; return Math.max(13,Math.max(6,e.wall+3,e.radius+3)+6); }
 export function issues(p:Project):string[] {
  const e=p.enclosure,d=dimensions(p), margin=layoutMargin(p), out:string[]=[];
@@ -45,6 +63,7 @@ export function issues(p:Project):string[] {
     const h=q.kind==='circle'?q.w:q.h;
     // Rails occupy a protected perimeter; this also prevents cutouts severing screw bosses.
     if(q.x<margin-1e-6||q.y<margin-1e-6||q.x+q.w>size.w-margin+1e-6||q.y+h>size.h-margin+1e-6)out.push(`${f==='control'?'Control surface':'Back'}: “${q.name}” crosses the ${margin} mm hardware margin.`);
+    if(f==='back')for(const box of backGussetKeepouts(p))if(q.x<box.x+box.w&&q.x+q.w>box.x&&q.y<box.h)out.push(`Back: “${q.name}” overlaps a bottom-screw gusset. Move it above ${box.h.toFixed(1)} mm or sideways clear of the screw pad.`);
   }
  }
  return [...new Set(out)];
@@ -59,7 +78,7 @@ export function parseProject(text:string):Project {
  const e=raw.enclosure,m=raw.machining;
  for(const k of ['width','depth','height'] as const)base.enclosure[k]=num(e,k,10,1000);
  for(const [k,lo,hi] of [['angle',0,30],['wall',2,6],['plate',2,5],['padding',12,100],['overhang',0,10],['woodThickness',4,25],['radius',0,5]] as const)base.enclosure[k]=num(e,k,lo,hi);
- if(!['sharp','chamfer','fillet'].includes(e.edge)||![4,6].includes(e.screws)||!['walnut','maple','cherry','oak'].includes(e.wood)||!/^#[0-9a-f]{6}$/i.test(e.color)||typeof e.autoSize!=='boolean')throw Error('Invalid enclosure options.');
+ if(!['sharp','chamfer','fillet'].includes(e.edge)||![4,6].includes(e.screws)||!['walnut','maple','cherry','oak','plastic'].includes(e.wood)||!/^#[0-9a-f]{6}$/i.test(e.color)||typeof e.autoSize!=='boolean')throw Error('Invalid enclosure options.');
  Object.assign(base.enclosure,{edge:e.edge,screws:e.screws,wood:e.wood,color:e.color,autoSize:e.autoSize});
  for(const [k,lo,hi] of [['tool',1,4],['feed',10,1000],['plunge',10,300],['stepDown',0.1,1],['safeZ',2,20],['rpm',1000,10000],['through',0,0.5],['stockMargin',5,30]] as const)base.machining[k]=num(m,k,lo,hi);
  if(![1.5875,3.175].includes(m.tool)||m.workholding!=='tape')throw Error('Unsupported cutter or workholding.');

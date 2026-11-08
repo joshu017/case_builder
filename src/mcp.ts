@@ -13,7 +13,7 @@ const enclosure = z.object({
  angle:mm(0,30).describe('TOTAL included angle in degrees: 10 means +5 top and -5 bottom.'),
  wall:mm(2,6),plate:mm(2,5),padding:mm(12,100),autoSize:z.boolean(),overhang:mm(0,10),
  woodThickness:mm(4,25).describe('Shared end-cap thickness for both printed and milled caps.'),
- edge:z.enum(['sharp','chamfer','fillet']),radius:mm(0,5),screws:z.union([z.literal(4),z.literal(6)]),color:z.string().regex(/^#[0-9a-f]{6}$/i),wood:z.enum(['walnut','maple','cherry','oak'])
+ edge:z.enum(['sharp','chamfer','fillet']),radius:mm(0,5),screws:z.union([z.literal(4),z.literal(6)]),color:z.string().regex(/^#[0-9a-f]{6}$/i),wood:z.enum(['walnut','maple','cherry','oak','plastic'])
 }).strict();
 const component = z.object({id:z.string().max(100),name,shapes:z.array(shape).max(64)}).strict();
 const machining = z.object({tool:z.union([z.literal(1.5875),z.literal(3.175)]),feed:mm(10,1000),plunge:mm(10,300),stepDown:mm(.1,1),safeZ:mm(2,20),rpm:mm(1000,10000),through:mm(0,.5),stockMargin:mm(5,30),workholding:z.literal('tape')}).strict();

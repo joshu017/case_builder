@@ -7,7 +7,7 @@
 - Rear height defaults to 50 mm and is user adjustable. It is the exterior height at the wide back, not internal clearance. Reject profiles with insufficient front height.
 - Wood thickness 6 mm; cap overhang 1.5 mm, configurable to zero. Rounded/chamfered profile corners should match shell and cap. Cosmetic bevel on wood thickness edges is outside MVP CAM.
 - Bottom plate recessed flush, four countersunk M3 screws or optional six. Plastic pilot holes 2.5 mm for manual tapping. Four M3 screws per end cap.
-- Printer: user-specified Bambu P1S usable 250 x 250 x 250 mm. Shell printed control surface down, supports expected for back cutouts.
+- Printer: user-specified Bambu P1S usable 250 x 250 x 250 mm. Shell printed control surface down. Straight 45-degree structural gussets reduce support needs; back cutouts, small horizontal bores and decorative outer edges still require slicer/physical review.
 - CNC: stock FoxAlien Masuter spindle/controller; 1/16 inch (1.5875 mm) or 1/8 inch (3.175 mm) flat end mill; double-sided tape initially. Do not silently treat tape programs as clamp-safe.
 - Library bundled/global without accounts. User components embedded in project JSON alongside both layouts and manufacturing settings. Local storage plus portable, versioned project JSON.
 - User supplies actual component dimensions later; do not represent example cutouts as verified hardware templates.
@@ -23,7 +23,7 @@ Follow ~/workers conventions: pnpm, TypeScript, credential-free CI, manual Cloud
 Production target: https://joshjacobson.net/casebuilder/ in the Josh@joshjacobson.net account, verified from zone ownership. The user explicitly authorized deployment on 2026-11-07 after Snyk scanning. Keep the account ID in the deployment environment only. Before release run Snyk SCA including dev dependencies and SAST with high severity thresholds; unavailable/failed scans block release. Do not put credentials in GitHub Actions. Local testing does not require deployment approval. Ask for outward-facing push/deploy approval only after the result is reviewable, per ~/workers/AGENTS.md.
 
 ## Screw-rail reinforcement and bottom hardware
-The large tangent webs were rejected as too bulky. Use small 1.25 mm internal 45-degree chamfers measured along the wall from the rail/wall intersection, not a tangent brace across the whole rail. Keep the pilot centers, exterior and bottom fit unchanged; minimum dynamic layout margin is 13 mm.
+The earlier broad reinforcement was rejected as bulky, then the user explicitly requested support-oriented geometry and straight 45-degree gussets. Add bed-facing rail gussets and local 8.6 mm-wide bottom-screw gussets measured in control-surface-down print coordinates. Preserve exterior, pilot centers and plate fit. Keep the small junction chamfers where helpful. Validate rear cutouts against the local bottom-screw gusset keepouts as well as the general hardware margin. Do not promise support-free printing for arbitrary rear cutouts or untested materials/settings.
 Bottom screws are M3x6 flathead as in the user's photo. Model flush conical heads, not cylindrical button heads. Assumed countersink: 90° included angle, 6.4 mm mouth, 3.4 mm clearance bore, 1.5 mm deep. Actual head dimensions are not supplied; do not claim exact hardware fit. At the default 3 mm plate plus 0.25 mm clearance, nominal thread engagement is 2.75 mm. Flag thicker plates as needing longer screws.
 
 ## End-cap exports
@@ -43,3 +43,7 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - New-project case material defaults to a lighter blue-tinged gray #71808A; wood remains walnut. Preserve all saved project colors. UI restyling must not override project material settings.
 - Appearance section is expanded by default, exposing plastic color and wood controls.
 - Compact layout: navigation 38 px, fields 28 px, tight spacing. All former disclosure sections (including Repeat selection) are permanent sections with headings. Appearance and profile controls use two-column rows. Target the normal editor's full settings at 1366×768; retain scrolling for long selection tools and smaller screens.
+
+## Latest selectors and cap material
+- Control surface / Back sidebar selectors use a plain #E1E8ED selected/hover fill, with no red stripe, special icon color, outline or pressed movement.
+- Keep Wood dropdown terminology; include plastic alongside walnut/maple/cherry/oak. plastic caps use the current case color and plastic material (no wood texture). woodThickness remains the shared cap-thickness project key; UI label is Cap thickness. Persist and accept plastic through project import and MCP. Both cap STLs and cap G-code remain in every package regardless of appearance choice.

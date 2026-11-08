@@ -62,3 +62,14 @@ User selected always including printable end caps alongside the existing CNC pro
 - Replaced all disclosure controls with permanent sections, including Repeat selection. Navigation is 38 px and inputs 28 px. Profile style and radius also share a row.
 - Shortened redundant helper prose while retaining hardware sizes, symmetric slopes and thicker-plate warnings. Canvas height adapts to browser height.
 - User reviewed the local preview and explicitly approved deployment. Normal enclosure controls fit the 1366×768 viewport; selected-cutout tools can still require sidebar scrolling.
+
+## Control-surface-down print gussets and cap material
+
+- User asked to revisit the extrusion for support-free printing, then explicitly preferred straight 45-degree gussets over curved ramps. This supersedes the previous requirement to keep all reinforcement limited to small 1.25 mm junction chamfers.
+- Bed-facing rail gussets use straight 45-degree profiles in the ACTUAL export orientation; local bottom-screw gussets are 8.6 mm wide. Exterior, screw centers and removable plate fit are preserved.
+- Default blank-shell volume rises from 132163.87 to 138483.76 mm³ (+4.78%). Sampled triangle normals identify zero internal facets steeper than 45 degrees after excluding the end pilot bores and first-layer perimeter region. This geometric check does not establish a physical support-free print.
+- Keep circular 2.5 mm horizontal tap bores for existing hardware. Back apertures can still need bridging/support. Edge treatments and filament/cooling/layer settings need slicer and print review.
+- Validate rear cutouts against local screw-pad gusset keepouts; otherwise a previously valid cutout near a lower screw could leave reinforcement behind its opening.
+- Plastic added to Wood dropdown; case and caps share the selected plastic color/material. Walnut remains default. All output formats remain available.
+- Simplify face selectors to plain gray backgrounds without red stripe or pressed movement.
+- Local comparison SVG, full package and 25 mm print-oriented coupon generated for review. No deployment of this revision yet.

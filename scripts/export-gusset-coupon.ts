@@ -1,0 +1,14 @@
+import Module from 'manifold-3d';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {buildAssembly,stl} from '../src/geometry';
+import {newProject,dimensions} from '../src/model';
+import {exportPackage} from '../src/export';
+const w=await Module();w.setup();const p=newProject();p.enclosure.wood='plastic';const a=buildAssembly(w,p),d=dimensions(p);
+mkdirSync('output',{recursive:true});
+writeFileSync('output/gusseted-case-package.zip',exportPackage(p,a));
+const shell=new w.Manifold(new w.Mesh({numProp:3,vertProperties:a.shell.positions,triVerts:a.shell.indices}));
+const box=w.Manifold.cube([25,200,200]).translate([0,-20,-20]),coupon=shell.intersect(box),m=coupon.getMesh();
+const angle=Math.PI-d.a;
+writeFileSync('output/gusset-test-section.stl',stl({positions:m.vertProperties,indices:m.triVerts,volume:coupon.volume()},(x,y,z)=>[x,y*Math.cos(angle)-z*Math.sin(angle),y*Math.sin(angle)+z*Math.cos(angle)]));
+console.log({couponVolume:coupon.volume(),status:coupon.status(),sectionWidth:25});
+coupon.delete();box.delete();shell.delete();

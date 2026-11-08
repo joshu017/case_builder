@@ -19,7 +19,7 @@ test('stateless MCP handshake, tools and guide are discoverable',async()=>{
  const guide=await rpc('resources/read',{uri:'casebuilder:///guide'});assert.match(guide.body.result.contents[0].text,/TOTAL included angle/);
 });
 test('complete MCP design workflow round-trips into browser project and ZIP',async()=>{
- const created=await call('create_project',{name:'MCP test'});let p=created.structuredContent.project;
+ const created=await call('create_project',{name:'MCP test',enclosure:{wood:'plastic'}});let p=created.structuredContent.project;
  const placed=await call('place_component',{project:p,face:'control',x:30,y:30,component:{id:'knob',name:'Knob',shapes:[{id:'hole',name:'Shaft',kind:'circle',x:0,y:0,w:7,h:7}]}});
  p=placed.structuredContent.project;assert.equal(p.layouts.control[0].x,30);assert.equal(p.components.length,1);
  const updated=await call('update_enclosure',{project:p,enclosure:{height:55,overhang:0}});p=updated.structuredContent.project;

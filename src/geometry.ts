@@ -1,5 +1,5 @@
 import type { ManifoldToplevel, Manifold, CrossSection, Vec2 } from 'manifold-3d';
-import { dimensions, screwCenters, bottomCenters, issues, type Project, type Shape } from './model';
+import { dimensions, screwCenters, bottomCenters, bottomGussetProfile, issues, type Project, type Shape } from './model';
 export type MeshData = { positions: Float32Array; indices: Uint32Array; volume: number };
 export type Assembly = { shell:MeshData; bottom:MeshData; left:MeshData; right:MeshData; capOutline:number[][]; screwCenters:number[][]; printBounds:number[] };
 export function profile(p:Project):Vec2[] {
@@ -41,6 +41,19 @@ export function railWallChamfers(center:Vec2, wallPoint:Vec2, inward:Vec2, radiu
   return points;
  });
 }
+/** Straight 45-degree gusset covering the full bed-facing half of a rail. */
+export function printRailGusset(p:Project,center:Vec2,radius=4.3):Vec2[] {
+ const d=dimensions(p),front=center[0]<d.depth/2,sign=front?1:-1;
+ // h is across the profile; v increases away from the bed with control face down.
+ const h=d.c*center[0]+d.s*center[1],v=d.s*center[0]-d.c*center[1];
+ const tangentH=h+sign*radius,tangentV=v-radius*(Math.SQRT2-1);
+ const wall=front?p.enclosure.wall-0.25:d.depth-p.enclosure.wall+0.25;
+ const anchorV=(tangentV+sign*(wall/d.c-tangentH))/(1+sign*d.t);
+ const at=(hh:number,vv:number):Vec2=>[d.c*hh+d.s*vv,d.s*hh-d.c*vv];
+ const points=[at(wall/d.c-d.t*anchorV,anchorV),at(tangentH,tangentV),at(tangentH,v),center,at(wall/d.c-d.t*v,v)];
+ const area=points.reduce((sum,a,i)=>{const b=points[(i+1)%points.length];return sum+a[0]*b[1]-b[0]*a[1];},0);
+ return area<0?points.reverse():points;
+}
 export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
  const errors=issues(p);if(errors.length)throw Error(errors[0]);
  const objects:(Manifold|CrossSection)[]=[];
@@ -75,8 +88,15 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    const webs=railWallChamfers(center,[front?e.wall:d.depth-e.wall,0],[front?1:-1,0]);
    if(i>=2)webs.push(...railWallChamfers(center,[0,e.height-d.rise-topOffset],[d.s,-d.c]));
    for(const triangle of webs)shell=add(shell,yz(extrude(cross(triangle),d.width)));
+   shell=add(shell,yz(extrude(cross(printRailGusset(p,center)),d.width)));
   }
-  for(const [x,y] of bottomCenters(p))shell=add(shell,bottomFrame(move(cyl(9,4.3),[x,y,e.plate])));
+  for(const [x,y] of bottomCenters(p)) {
+   const boss=bottomFrame(move(cyl(9,4.3),[x,y,e.plate]));
+   const points=bottomGussetProfile(p,y);
+   // A straight triangular rib only at each screw pad, 8.6 mm wide.
+   shell=add(shell,boss);
+   shell=add(shell,move(yz(extrude(cross(points),8.6)),[x-4.3,0,0]));
+  }
   shell=keep(shell.intersect(outer));
   const plateY=e.wall/d.c+0.25, plateDepth=d.surfaceDepth-2*plateY;
   // Pocket extends through the open ends; leaves front/back walls and upper screw rails.
