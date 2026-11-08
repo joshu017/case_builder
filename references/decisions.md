@@ -89,3 +89,5 @@ User selected always including printable end caps alongside the existing CNC pro
 ## Remove redundant layout headings
 
 User requested removing the entire duplicate Control surface/Back heading area. Layout tabs now begin with tools; SVG/DXF exports share the upper-right Undo/Redo/Fit view group. On narrow centers, whole toolbar groups wrap while export and history actions stay together. Geometry feedback remains an overlay below the toolbar; Assembly and Manufacturing headings remain.
+
+The user approved the complete editor/guide/toolbar revision for deployment; released to joshjacobson.net/casebuilder. This supersedes the local-only status above. wrong.rodeo remains deferred.
