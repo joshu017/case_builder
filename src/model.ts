@@ -29,9 +29,9 @@ export function dimensions(p:Project) {
   const e=p.enclosure, a=e.angle*Math.PI/360, c=Math.cos(a), s=Math.sin(a), t=Math.tan(a);
   let width=e.width, depth=e.depth;
   if(e.autoSize && p.layouts.control.length) {
-    width=Math.max(40,...p.layouts.control.map(q=>q.x+q.w+Math.max(e.padding,layoutMargin(p))));
+    width=Math.max(40,...p.layouts.control.map(q=>q.x+q.w+e.padding));
     depth=Math.max(35,...p.layouts.control.map(q=>(q.y+(q.kind==='circle'?q.w:q.h)+Math.max(e.padding,layoutMargin(p)))*c));
-    if(p.layouts.back.length) width=Math.max(width,...p.layouts.back.map(q=>q.x+q.w+Math.max(e.padding,layoutMargin(p))));
+    if(p.layouts.back.length) width=Math.max(width,...p.layouts.back.map(q=>q.x+q.w+e.padding));
   }
   return {width,depth,a,c,s,t,frontHeight:e.height-2*depth*t, rise:depth*t, surfaceDepth:depth/c};
 }
@@ -77,14 +77,16 @@ export function issues(p:Project):string[] {
     const h=q.kind==='circle'?q.w:q.h;
     if(q.kind==='rect'&&q.corner&&q.corner!=='sharp'&&(!Number.isFinite(q.radius)||q.radius!<0||q.radius!>Math.min(q.w,q.h)/2))out.push(`Rectangle “${q.name}”: corner size must be between 0 and half the smaller dimension.`);
     if(q.guide){const g=q.guide,b=guideBounds(q);
-      if(b.x<margin||b.y<margin||b.x+b.w>size.w-margin||b.y+b.h>size.h-margin)out.push(`Guide for “${q.name}” crosses the hardware margin.`);
+      if(b.x< -1e-6||b.x+b.w>size.w+1e-6)out.push(`Guide for “${q.name}” extends beyond a side edge.`);
+      if(b.y<margin-1e-6||b.y+b.h>size.h-margin+1e-6)out.push(`Guide for “${q.name}” crosses the top/bottom hardware margin.`);
       if(q.x<b.x+g.wall-1e-6||q.y<b.y+g.wall-1e-6||q.x+q.w>b.x+b.w-g.wall+1e-6||q.y+h>b.y+b.h-g.wall+1e-6)out.push(`Guide for “${q.name}”: the cutout must fit inside its guide opening. Increase inner dimensions or reduce the offset.`);
       const reach=e.wall+g.height;
       if(f==='control'){if(d.c*b.y+d.s*reach<e.wall||d.c*(b.y+b.h)+d.s*reach>d.depth-e.wall)out.push(`Guide for “${q.name}” reaches a front or back wall. Reduce guide height or move it.`);const y=d.c*b.y+d.s*reach,z=e.height-d.rise+d.s*b.y-d.c*reach;if(z<d.rise-y*d.t+(e.plate+.25)/d.c)out.push(`Guide for “${q.name}” reaches the bottom plate. Reduce guide height.`);}
       else {if(reach>d.depth-e.wall)out.push(`Guide for “${q.name}” reaches the front wall. Reduce guide height.`);for(const box of backGussetKeepouts(p))if(b.x<box.x+box.w&&b.x+b.w>box.x&&b.y<box.h)out.push(`Guide for “${q.name}” overlaps a bottom-screw gusset.`);const y=d.depth-reach;if(b.y<d.rise-y*d.t+(e.plate+.25)/d.c||b.y+b.h>e.height-d.rise+y*d.t-e.wall/d.c)out.push(`Guide for “${q.name}” reaches the top or bottom. Reduce guide height or move it.`);}
     }
-    // Rails occupy a protected perimeter; this also prevents cutouts severing screw bosses.
-    if(q.x<margin-1e-6||q.y<margin-1e-6||q.x+q.w>size.w-margin+1e-6||q.y+h>size.h-margin+1e-6)out.push(`${f==='control'?'Control surface':'Back'}: “${q.name}” crosses the ${margin} mm hardware margin.`);
+    // Rails protect the top/bottom strips; the open extrusion ends have no side hardware margin.
+    if(q.x< -1e-6||q.x+q.w>size.w+1e-6)out.push(`${f==='control'?'Control surface':'Back'}: “${q.name}” extends beyond a side edge.`);
+    if(q.y<margin-1e-6||q.y+h>size.h-margin+1e-6)out.push(`${f==='control'?'Control surface':'Back'}: “${q.name}” crosses the ${margin} mm top/bottom hardware margin.`);
     if(f==='back')for(const box of backGussetKeepouts(p))if(q.x<box.x+box.w&&q.x+q.w>box.x&&q.y<box.h)out.push(`Back: “${q.name}” overlaps a bottom-screw gusset. Move it above ${box.h.toFixed(1)} mm or sideways clear of the screw pad.`);
   }
  }

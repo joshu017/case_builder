@@ -62,3 +62,5 @@ Always include BOTH end-cap-left.stl and end-cap-right.stl along with end-cap.nc
 - Default library includes builtin-usb-c-port: nominal 9.4 × 3.6 mm rounded clearance opening, R1.8, no internal guide. Available to new and existing projects; embed a copy on placement so exports stay self-contained. Dimensions are an editable clearance preset, not a universal panel-mount standard.
 
 - Default Behringer-style fader uses the user drawing: 75 × 9 mm body, 60 mm travel (despite request calling it 100 mm), 71 mm M2 mounting pitch. Preset is vertical, grouped slot + two clearance holes, one body fence. Editable allowances: 66 × 3 R1.5 slot, Ø2.2 holes, 9.4 × 75.4 fence cavity, 1 mm wall, 2 mm height. Do not scale drawing to 100 mm or claim verified physical fit.
+
+- Hardware margin applies only to top/bottom on both layouts (default 13 mm); no side hardware margin. Cutouts and guide walls must remain within face width. Draw two dotted horizontal margin lines across the full face, with no vertical inset lines. Auto-size width uses requested padding, not the rail margin; keep local rear gusset collision checks.

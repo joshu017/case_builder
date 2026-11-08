@@ -23,3 +23,12 @@ test('out-of-range alignment fails without partially moving a selection',()=>{co
 test('default USB-C library is available to existing projects without adding guides or mutating custom components',async()=>{
  const {componentLibrary,defaultComponents}=await import('../src/model');const p=newProject(),c=componentLibrary(p).find(c=>c.id==='builtin-usb-c-port')!;assert.ok(c);assert.equal(c.shapes[0].corner,'fillet');assert.equal(c.shapes[0].guide,undefined);assert.equal(p.components.length,0);p.components.push(structuredClone(c));p.components[0].shapes[0].w=10;assert.equal(componentLibrary(p).filter(x=>x.id===c.id).length,1);assert.equal(defaultComponents()[0].shapes[0].w,9.4);assert.deepEqual(parseProject(JSON.stringify(p)),p);
 });
+
+test('hardware margins protect only top/bottom on both faces; sides still enforce face bounds',()=>{
+ for(const face of ['control','back'] as const){const p=newProject(),shape=q('edge',1,20,5,5);p.layouts[face]=[shape];assert.deepEqual(issues(p),[]);
+ shape.x=174;assert.deepEqual(issues(p),[]);shape.x=176;assert.ok(issues(p).some(x=>x.includes('side edge')));
+ shape.x=1;shape.y=12;assert.ok(issues(p).some(x=>x.includes('top/bottom hardware margin')));
+ shape.x=2;shape.y=20;shape.guide={innerWidth:7,innerHeight:7,wall:1,height:2,offsetX:0,offsetY:0};assert.deepEqual(issues(p),[]);
+ shape.x=1;assert.ok(issues(p).some(x=>x.includes('side edge')));
+ }
+});
