@@ -135,4 +135,4 @@ Original selection is now a provisional draggable source for rectangular and cir
 - Latest user request: default shell wall 1.6 mm, superseding 3 mm and the interim 2 mm. Bottom plate remains 3 mm. Accept 1.6 mm through UI, portable JSON and MCP; preserve saved thickness choices.
 - Reduce side rail outer radius from 4.3 to 3.6 mm around unchanged 2.5 mm pilot bores. At equal wall thickness this lifts the 45-degree wall intersection approximately 1 mm; a thinner wall independently changes that intersection. Fully bond rails to thin walls to avoid sealed slivers.
 - Bottom screw pad cylinder depth is 4 mm instead of 9 mm; its local rounded 45-degree support and rear keepout follow the shorter pad. Shared side rails can extend beyond the pad itself.
-- This is a local geometry review, not a deployment or physical rigidity/printability validation. Internal guides may help rigidity, but depend on the user's layout.
+- User approved the rendered profile and deployment; see references/release-2026-11-08.md. Physical rigidity/printability remains unvalidated. Internal guides may help rigidity, but depend on the user's layout.
