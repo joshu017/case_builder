@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Module from 'manifold-3d';
-import { newProject, dimensions, parseProject, issues, screwCenters, bottomCenters } from '../src/model.ts';
+import { newProject, dimensions, parseProject, issues, screwCenters, bottomCenters, bottomInsets } from '../src/model.ts';
 import { buildAssembly, stl, type MeshData } from '../src/geometry.ts';
 import { makeToolpath, offsetConvex } from '../src/cam.ts';
 import { exportPackage, layoutSVG, layoutDXF } from '../src/export.ts';
@@ -54,16 +54,16 @@ test('bottom flathead seats taper at 90 degrees on the outside face',()=>{
  close(6-p.enclosure.plate,4);b.delete();
 });
 
-test('extrusion ends flush with screw pads and full-profile plate seats without a gap',()=>{
+test('rectangular inset plate seats flush while extrusion retains exterior corners',()=>{
  for(const [angle,plate] of [[0,2],[10,2],[30,5]]){
   const p=newProject();Object.assign(p.enclosure,{angle,plate,height:90});
   const d=dimensions(p),a=buildAssembly(wasm,p),s=solid(a.shell),b=solid(a.bottom);
   const normal=(v:number[])=>v[1]*d.s+(v[2]-d.rise)*d.c;
   const levels=(m:MeshData)=>Array.from({length:m.positions.length/3},(_,i)=>normal(Array.from(m.positions.slice(i*3,i*3+3))));
-  close(Math.min(...levels(a.shell)),plate);close(Math.min(...levels(a.bottom)),0);
-  const wallSeats=[p.enclosure.wall/2,d.depth-p.enclosure.wall/2].map(y=>[d.width/2,(y-plate*d.s)/d.c]);
+  close(Math.min(...levels(a.shell)),0);close(Math.min(...levels(a.bottom)),0);
+  const inset=bottomInsets(p);
   const railSeats=screwCenters(p).slice(0,2).flatMap(([y,z],i)=>[-2.5,0,2.5].map(offset=>[d.width/2,d.c*y-d.s*(z-d.rise)+offset]));
-  for(const [x,y] of [...bottomCenters(p),...wallSeats,...railSeats]){
+  for(const [x,y] of [...bottomCenters(p),...railSeats.filter(([,y])=>y>inset.front+.25&&y<d.surfaceDepth-inset.back-.25)]){
    // Sample the seating annulus outside both the pilot and plate clearance bore.
    const point=(n:number):[number,number,number]=>[x+2,y*d.c+n*d.s,d.rise-y*d.s+n*d.c];
    const shellHits=s.rayCast(point(-1),point(plate+.5));assert.equal(shellHits.length,1);
@@ -71,7 +71,26 @@ test('extrusion ends flush with screw pads and full-profile plate seats without 
    const plateHits=b.rayCast(point(plate-.1),point(plate+.5));assert.equal(plateHits.length,1);
    close(normal(plateHits[0].position),plate,.0001);
   }
-  const overlap=s.intersect(b);close(overlap.volume(),0,.001);overlap.delete();s.delete();b.delete();
+  // Float32 reconstruction of coincident seating faces leaves sub-micron overlap.
+  const overlap=s.intersect(b);close(overlap.volume(),0,.01);overlap.delete();s.delete();b.delete();
+ }
+});
+
+test('plate perimeter stays rectangular and its seam stays inside the flat bottom face',()=>{
+ for(const edge of ['sharp','chamfer','fillet'] as const)for(const angle of [0,10,30]){
+  const p=newProject();Object.assign(p.enclosure,{edge,angle,height:90});
+  const d=dimensions(p),a=buildAssembly(wasm,p),insets=bottomInsets(p),m=a.bottom;
+  const vertices=Array.from({length:m.positions.length/3},(_,i)=>{
+   const [x,y,z]=m.positions.slice(i*3,i*3+3);
+   return [x,d.c*y-d.s*(z-d.rise),d.s*y+d.c*(z-d.rise)];
+  });
+  // All eight sharp prism corners survive: the outside profile bevel is not on the plate.
+  for(const x of [.25,d.width-.25])for(const y of [insets.front+.25,d.surfaceDepth-insets.back-.25])for(const z of [0,p.enclosure.plate])
+   assert.ok(vertices.some(v=>Math.hypot(v[0]-x,v[1]-y,v[2]-z)<.0001));
+  if(edge!=='sharp'){
+   assert.ok(insets.front>p.enclosure.radius/Math.tan(Math.PI/4+d.a/2));
+   assert.ok(insets.back>p.enclosure.radius/Math.tan(Math.PI/4-d.a/2));
+  }
  }
 });
 

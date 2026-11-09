@@ -40,8 +40,14 @@ export function screwCenters(p:Project):[number,number][] {
   const d=dimensions(p), e=p.enclosure, inset=Math.max(6,e.wall+3,e.radius+3);
   return [[inset,d.rise+inset],[d.depth-inset,inset],[d.depth-inset,e.height-inset],[inset,e.height-d.rise-inset]];
 }
+/** Bottom pocket stays inside both the wall and the exterior corner treatment. */
+export function bottomInsets(p:Project) {
+ const d=dimensions(p),e=p.enclosure,r=e.edge==='sharp'?0:e.radius;
+ return {front:Math.max(e.wall/d.c,r/Math.tan(Math.PI/4+d.a/2)+.25),
+  back:Math.max(e.wall/d.c,r/Math.tan(Math.PI/4-d.a/2)+.25)};
+}
 export function bottomCenters(p:Project):[number,number][] {
-  const d=dimensions(p), inset=p.enclosure.wall/d.c+4.25, ys=[inset,d.surfaceDepth-inset];
+  const d=dimensions(p), inset=bottomInsets(p), ys=[inset.front+4.25,d.surfaceDepth-inset.back-4.25];
   const xs=p.enclosure.screws===6?[14,d.width/2,d.width-14]:[14,d.width-14];
   return xs.flatMap(x=>ys.map(y=>[x,y] as [number,number]));
 }

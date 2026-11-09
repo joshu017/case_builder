@@ -1,6 +1,6 @@
 import {rectangleOutline} from './layout';
 import type { ManifoldToplevel, Manifold, CrossSection, Vec2 } from 'manifold-3d';
-import { dimensions, screwCenters, bottomCenters, bottomGussetProfile, guideBounds, issues, type Project, type Shape } from './model';
+import { dimensions, screwCenters, bottomCenters, bottomInsets, bottomGussetProfile, guideBounds, issues, type Project, type Shape } from './model';
 export type MeshData = { positions: Float32Array; indices: Uint32Array; volume: number };
 export type Assembly = { shell:MeshData; bottom:MeshData; left:MeshData; right:MeshData; capOutline:number[][]; screwCenters:number[][]; printBounds:number[] };
 export function profile(p:Project):Vec2[] {
@@ -129,13 +129,12 @@ export function buildAssembly(wasm:ManifoldToplevel,p:Project):Assembly {
    shell=add(shell,keep(rib.intersect(bottomFrame(footprint))));
   }
   shell=keep(shell.intersect(outer));
-  // Trim the entire shell to the screw-pad seating plane: no raised perimeter lip.
-  const pocket=bottomFrame(move(cube([d.width+2,d.surfaceDepth+40,e.plate+20]),[-1,-20,-20]));
+  // Preserve the complete exterior chamfer on the shell. The rectangular pocket
+  // and its seam remain within the flat bottom face, with a flush seating depth.
+  const insets=bottomInsets(p),pocketDepth=d.surfaceDepth-insets.front-insets.back;
+  const pocket=bottomFrame(move(cube([d.width+2,pocketDepth,e.plate+20]),[-1,insets.front,-20]));
   shell=cut(shell,pocket);
-  // The plate replaces the trimmed profile, including its outside corner treatment.
-  // Keep end-cap clearance along X; front/back edges now cover the wall ends.
-  const localOuter=rotate(move(outer,[0,0,-d.rise]),[deg,0,0]);
-  let bottom=keep(move(cube([d.width-0.5,d.surfaceDepth+40,e.plate]),[0.25,-20,0]).intersect(localOuter));
+  let bottom=move(cube([d.width-.5,pocketDepth-.5,e.plate]),[.25,insets.front+.25,0]);
   for(const [x,y] of bottomCenters(p)) {
     shell=cut(shell,bottomFrame(move(cyl(e.plate+11,1.25),[x,y,-1])));
     bottom=cut(bottom,move(cyl(e.plate+2,1.7),[x,y,-1]));

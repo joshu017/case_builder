@@ -148,3 +148,5 @@ Original selection is now a provisional draggable source for rectangular and cir
 - Remove the residual notch at bottom rail crowns: extend their wall-to-rail seating lands to the exact plate plane, continuous along the extrusion between local screw pads. Keep the rim removed and plate STL countersinks-up.
 
 - Export ZIP organization: project.json and README.txt at root; SVG/DXF in 2d/; all four STL parts in stl/; CNC .nc G-code in gcode/. These are CNC programs, not PCB Gerbers. Applies to browser and MCP packages.
+
+- Latest correction supersedes full-profile bottom plate/rim removal: bottom plate is a plain rectangular prism with countersunk screw holes only. Keep ALL exterior profile chamfer/fillet on extrusion. Inset the plate/pocket beyond the exterior corner tangency so seam is on flat bottom face; preserve flush outer face, direct seating contact, lateral clearance and continuous rail lands. Screw pad positions follow the pocket insets.
